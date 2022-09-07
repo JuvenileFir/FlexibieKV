@@ -1,0 +1,20 @@
+EAL: Detected 36 lcore(s)
+EAL: Detected 1 NUMA nodes
+EAL: Multi-process socket /var/run/dpdk/rte/mp_socket
+EAL: Selected IOVA mode 'PA'
+EAL: No available hugepages reported in hugepages-1048576kB
+EAL: Probing VFIO support...
+EAL: VFIO support initialized
+EAL: PCI device 0000:03:00.1 on NUMA socket 0
+EAL:   probe driver: 15b3:1017 net_mlx5
+WEN: There are 1 device(s) available
+[T]: Testing expandable circular log...
+
+count:                           0
+table_capa:               10780343 | load_factor:              0.000000
+
+ == [STAT] Workers Start (4 threads in total) == 
+ == [STAT] Memory flowing controler started on CORE 34 == 
+== HIT_RATIO ==   id: 00  hit: 2568972 items / total: 2568972 items  [10500003]    == == ==
+== HIT_RATIO ==   id: 02  hit: 2516544 items / total: 2516544 items  [10500001]    == == ==
+== HIT_RATIO ==   id: 01  hit: 2516544 items / total: 2516544 items  [10500000]    == == ==

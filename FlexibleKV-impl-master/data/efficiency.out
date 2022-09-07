@@ -1,0 +1,152 @@
+MEM: Initializing pages...
+MEM:   initial allocation of 60 pages
+MEM:   sorting by virtual address
+EAL: Probing VFIO support...
+EAL: VFIO support initialized
+EAL: PCI device 0000:03:00.1 on NUMA socket 0
+EAL:   probe driver: 15b3:1017 net_mlx5
+WEN: There are 1 device(s) available
+[T]: Testing expandable circular log...
+
+count:                           0
+table_capa:               12615295 | load_factor:              0.000000
+
+ == [STAT] Workers Start (4 threads in total) == 
+ == [STAT] Memory flowing controler started on CORE 34 == 
+[ARGS](H2L) to_shrink = 1	 log = 5	 partition = 55
+  === [STAT] H2L is executed by Daemon ===  [time: 29.022000 ms]
+EXP1: 0000	0.465249
+[ARGS](H2L) to_shrink = 1	 log = 6	 partition = 54
+  === [STAT] H2L is executed by Daemon ===  [time: 29.821000 ms]
+EXP1: 0001	0.516535
+[ARGS](H2L) to_shrink = 1	 log = 7	 partition = 53
+  === [STAT] H2L is executed by Daemon ===  [time: 30.041000 ms]
+EXP1: 0002	0.560683
+[ARGS](H2L) to_shrink = 1	 log = 8	 partition = 52
+  === [STAT] H2L is executed by Daemon ===  [time: 33.634000 ms]
+EXP1: 0003	0.599085
+[ARGS](H2L) to_shrink = 1	 log = 9	 partition = 51
+  === [STAT] H2L is executed by Daemon ===  [time: 37.083000 ms]
+EXP1: 0004	0.632795
+[ARGS](H2L) to_shrink = 1	 log = 10	 partition = 50
+  === [STAT] H2L is executed by Daemon ===  [time: 38.615000 ms]
+EXP1: 0005	0.662623
+[ARGS](H2L) to_shrink = 1	 log = 11	 partition = 49
+  === [STAT] H2L is executed by Daemon ===  [time: 38.752000 ms]
+EXP1: 0006	0.689204
+[ARGS](H2L) to_shrink = 1	 log = 12	 partition = 48
+  === [STAT] H2L is executed by Daemon ===  [time: 39.475000 ms]
+EXP1: 0007	0.713039
+[ARGS](H2L) to_shrink = 1	 log = 13	 partition = 47
+  === [STAT] H2L is executed by Daemon ===  [time: 40.520000 ms]
+EXP1: 0008	0.734534
+[ARGS](H2L) to_shrink = 1	 log = 14	 partition = 46
+  === [STAT] H2L is executed by Daemon ===  [time: 44.655000 ms]
+EXP1: 0009	0.754018
+[ARGS](H2L) to_shrink = 1	 log = 15	 partition = 45
+  === [STAT] H2L is executed by Daemon ===  [time: 41.469000 ms]
+EXP1: 0010	0.771759
+[ARGS](H2L) to_shrink = 1	 log = 16	 partition = 44
+  === [STAT] H2L is executed by Daemon ===  [time: 43.390000 ms]
+EXP1: 0011	0.787982
+[ARGS](H2L) to_shrink = 1	 log = 17	 partition = 43
+  === [STAT] H2L is executed by Daemon ===  [time: 46.256000 ms]
+EXP1: 0012	0.802873
+[ARGS](H2L) to_shrink = 1	 log = 18	 partition = 42
+  === [STAT] H2L is executed by Daemon ===  [time: 48.361000 ms]
+EXP1: 0013	0.816590
+[ARGS](H2L) to_shrink = 1	 log = 19	 partition = 41
+  === [STAT] H2L is executed by Daemon ===  [time: 46.068000 ms]
+EXP1: 0014	0.829267
+[ARGS](H2L) to_shrink = 1	 log = 20	 partition = 40
+  === [STAT] H2L is executed by Daemon ===  [time: 49.328000 ms]
+EXP1: 0015	0.841017
+[ARGS](H2L) to_shrink = 1	 log = 21	 partition = 39
+  === [STAT] H2L is executed by Daemon ===  [time: 49.232000 ms]
+EXP1: 0016	0.851939
+[ARGS](H2L) to_shrink = 1	 log = 22	 partition = 38
+  === [STAT] H2L is executed by Daemon ===  [time: 50.757000 ms]
+EXP1: 0017	0.862118
+[ARGS](H2L) to_shrink = 1	 log = 23	 partition = 37
+  === [STAT] H2L is executed by Daemon ===  [time: 49.283000 ms]
+EXP1: 0018	0.871626
+[ARGS](H2L) to_shrink = 1	 log = 24	 partition = 36
+  === [STAT] H2L is executed by Daemon ===  [time: 53.091000 ms]
+EXP1: 0019	0.880527
+[ARGS](H2L) to_shrink = 1	 log = 25	 partition = 35
+  === [STAT] H2L is executed by Daemon ===  [time: 53.947000 ms]
+EXP1: 0020	0.888879
+[ARGS](H2L) to_shrink = 1	 log = 26	 partition = 34
+  === [STAT] H2L is executed by Daemon ===  [time: 55.141000 ms]
+EXP1: 0021	0.896730
+[ARGS](H2L) to_shrink = 1	 log = 27	 partition = 33
+  === [STAT] H2L is executed by Daemon ===  [time: 54.899000 ms]
+EXP1: 0022	0.904124
+[ARGS](H2L) to_shrink = 1	 log = 28	 partition = 32
+  === [STAT] H2L is executed by Daemon ===  [time: 109.133000 ms]
+EXP1: 0023	0.911100
+[ARGS](H2L) to_shrink = 1	 log = 29	 partition = 31
+  === [STAT] H2L is executed by Daemon ===  [time: 104.881000 ms]
+EXP1: 0024	0.917693
+[ARGS](H2L) to_shrink = 1	 log = 30	 partition = 30
+  === [STAT] H2L is executed by Daemon ===  [time: 114.331000 ms]
+EXP1: 0025	0.923932
+[ARGS](H2L) to_shrink = 1	 log = 31	 partition = 29
+  === [STAT] H2L is executed by Daemon ===  [time: 108.338000 ms]
+EXP1: 0026	0.929847
+[ARGS](H2L) to_shrink = 1	 log = 32	 partition = 28
+  === [STAT] H2L is executed by Daemon ===  [time: 115.245000 ms]
+EXP1: 0027	0.935461
+[ARGS](H2L) to_shrink = 1	 log = 33	 partition = 27
+  === [STAT] H2L is executed by Daemon ===  [time: 110.365000 ms]
+EXP1: 0028	0.940796
+[ARGS](H2L) to_shrink = 1	 log = 34	 partition = 26
+  === [STAT] H2L is executed by Daemon ===  [time: 122.315000 ms]
+EXP1: 0029	0.945874
+[ARGS](H2L) to_shrink = 1	 log = 35	 partition = 25
+  === [STAT] H2L is executed by Daemon ===  [time: 116.652000 ms]
+EXP1: 0030	0.950712
+[ARGS](H2L) to_shrink = 1	 log = 36	 partition = 24
+  === [STAT] H2L is executed by Daemon ===  [time: 130.572000 ms]
+EXP1: 0031	0.955327
+[ARGS](H2L) to_shrink = 1	 log = 37	 partition = 23
+  === [STAT] H2L is executed by Daemon ===  [time: 120.618000 ms]
+EXP1: 0032	0.959734
+[ARGS](H2L) to_shrink = 1	 log = 38	 partition = 22
+  === [STAT] H2L is executed by Daemon ===  [time: 136.824000 ms]
+EXP1: 0033	0.963947
+[ARGS](H2L) to_shrink = 1	 log = 39	 partition = 21
+  === [STAT] H2L is executed by Daemon ===  [time: 124.832000 ms]
+EXP1: 0034	0.967978
+[ARGS](H2L) to_shrink = 1	 log = 40	 partition = 20
+  === [STAT] H2L is executed by Daemon ===  [time: 139.559000 ms]
+EXP1: 0035	0.971839
+[ARGS](H2L) to_shrink = 1	 log = 41	 partition = 19
+  === [STAT] H2L is executed by Daemon ===  [time: 128.467000 ms]
+EXP1: 0036	0.975540
+[ARGS](H2L) to_shrink = 1	 log = 42	 partition = 18
+  === [STAT] H2L is executed by Daemon ===  [time: 139.740000 ms]
+EXP1: 0037	0.979091
+[ARGS](H2L) to_shrink = 1	 log = 43	 partition = 17
+  === [STAT] H2L is executed by Daemon ===  [time: 128.006000 ms]
+EXP1: 0038	0.982501
+[ARGS](H2L) to_shrink = 1	 log = 44	 partition = 16
+  === [STAT] H2L is executed by Daemon ===  [time: 280.780000 ms]
+EXP1: 0039	0.985778
+[ARGS](H2L) to_shrink = 1	 log = 45	 partition = 15
+  === [STAT] H2L is executed by Daemon ===  [time: 278.948000 ms]
+EXP1: 0040	0.988931
+[ARGS](H2L) to_shrink = 1	 log = 46	 partition = 14
+  === [STAT] H2L is executed by Daemon ===  [time: 283.181000 ms]
+EXP1: 0041	0.991965
+[ARGS](H2L) to_shrink = 1	 log = 47	 partition = 13
+  === [STAT] H2L is executed by Daemon ===  [time: 298.482000 ms]
+EXP1: 0042	0.994887
+count:                      681564
+set_nooverwrite:                 0 | set_new:                    681564
+set_inplace:                     0 | set_evicted:                     0
+get_found:                  794804 | get_notfound:           2070435556
+test_found:                      0 | test_notfound:                   0
+cleanup:                         0
+move_to_head_performed:          0 | move_to_head_skipped:            0 | move_to_head_failed:             0
+[INFO] Everything works fine.
