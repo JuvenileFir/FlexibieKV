@@ -4,7 +4,7 @@
 
 **Plan**:
 
-- Design how to trigger memory flowing
+- Design how to trigger memory flowing.
 
 - Asynchronous Expand/Shrink of Log Instance(s)
 
