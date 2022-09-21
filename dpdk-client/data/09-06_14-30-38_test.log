@@ -1,0 +1,10 @@
+EAL: Probing VFIO support...
+EAL: VFIO support initialized
+EAL: PCI device 0000:02:00.1 on NUMA socket 0
+EAL:   probe driver: 15b3:1017 net_mlx5
+rte = 11
+WEN: There are 1 device(s) available
+queue_id:3	set_key_before:13835058055282163710
+queue_id:0	set_key_before:1
+queue_id:2	set_key_before:9223372036854775807
+queue_id:1	set_key_before:4611686018427387904
