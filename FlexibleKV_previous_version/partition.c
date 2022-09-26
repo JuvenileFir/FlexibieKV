@@ -531,8 +531,6 @@ void hash_init_partition(const Cbool version, uint64_t S, uint64_t num_buckets) 
     shm_clean_pages(ret);
     partition_map.numOfpartitions++;
   }
-  for(size_t i=0;i<119;i++)
-    printf("i:%lu,bucket:%lu\n",i,ArcToBucket(i,0));
 }
 
 void *partition_header(uint32_t partitionNumber) { return partition_map.partitions[partitionNumber].pheader; }
