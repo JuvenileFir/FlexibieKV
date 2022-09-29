@@ -12,10 +12,7 @@ typedef struct StoreStats
     /* data */
 }StoreStats;
 
-typedef struct TableStats
-{
-    /* data */
-}TableStats;
+
 
 
 typedef struct LogBlock
@@ -28,12 +25,13 @@ typedef struct LogBlock
 
 typedef struct LogSegment
 {
-    LogBlock logBlocks[MAX];
+    LogBlock logBlocks[MAX];//max log blocks
     StoreStats storeStats;
-    TableStats tableStats;
+    
     uint32_t numPages;  // change name?
     uint32_t usingPage;
     uint32_t offset;
+    uint8_t round;
 }LogSegment;
 
 
@@ -42,7 +40,7 @@ class Log
 {
 private:
 public:
-    LogSegment logSegment[MAX];
+    LogSegment logSegment[MAX];//max thread
     uint16_t totalNumPage; // change name?
     uint16_t resizingPointer;
 

@@ -28,8 +28,10 @@ private:
     /* data */
 
 public:
-
+    MemBlock memBlocks[MAX_BLOCK_NUM];
     size_t block_size;
+    uint32_t numBlocks;
+    uint32_t numUsedBlocks;
 
     MemPool(/* args */);
     ~MemPool();
@@ -39,15 +41,20 @@ public:
     temp getAvailableNum();
     temp getPartitionTail();
     temp allocBlock();
-    temp cleanBlocks();
+    temp cleanBlock();
 };
 
 MemPool::MemPool(/* args */)
 {
+    
 }
 
 MemPool::~MemPool()
 {
+    for (size_t page_id = 0; page_id < mempool.numPages; page_id++) {
+        free(mempool.memPages[page_id].addr);
+    }
+    mempool.numPages = 0;
 }
 
 

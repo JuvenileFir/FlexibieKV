@@ -10,6 +10,8 @@ private:
     HashTable hashTable;
     Log log;
     MemPool memPool;
+    uint32_t is_running;
+    uint32_t stop_entry_gc;//used for stopping index entry gc when `move_h2t`???
 
 public:
     Piekv(/* args */);
@@ -21,12 +23,14 @@ public:
     temp set();
 };
 
-Piekv::Piekv(/* args */)
-{
+Piekv::Piekv(/* args */){
+    
+    is_running = 1;
+    stop_entry_gc = 0;
+
 }
 
-Piekv::~Piekv()
-{
+Piekv::~Piekv(){
 }
 
 
