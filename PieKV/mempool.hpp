@@ -3,8 +3,8 @@
 
 
 #include <cstddef>
-
-
+#include <cstdint>
+#include <cstring>
 
 #define MAX_BLOCK_NUM 16384
 
@@ -17,7 +17,7 @@ typedef int temp;    // a temp type for all functions with undefined return type
 struct MemBlock
 {
     void *addr;
-    uint32_t in_use;
+    uint32_t inUse;
 };
 
 
@@ -25,30 +25,24 @@ struct MemBlock
 class MemPool
 {
 private:
-    /* data */
+    size_t blockSize;
 
 public:
 
-    size_t block_size;
+    uint32_t blockNum;
+    uint32_t blockNumInUse;
+    MemBlock memBlocks[MAX_BLOCK_NUM];
 
     MemPool(/* args */);
     ~MemPool();
 
-    temp getBlockSize();
-    temp getBlockPtr();
-    temp getAvailableNum();
+    size_t getBlockSize();
+    void *getBlockPtr(uint32_t blockNumber);   // Q: Why use uint8_t * here?
+    uint32_t getBlockAvailableNum();
     temp getPartitionTail();
-    temp allocBlock();
-    temp cleanBlocks();
+    uint32_t allocBlock();
+    void memsetBlock(uint32_t blockNumber); //Q: a function making no sense, consider to remove it later
 };
-
-MemPool::MemPool(/* args */)
-{
-}
-
-MemPool::~MemPool()
-{
-}
 
 
 
