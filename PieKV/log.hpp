@@ -17,19 +17,19 @@ typedef struct StoreStats
 
 typedef struct LogBlock
 {
-    uint8_t blockPtr;
-    uint32_t blockId;
-    uint32_t Residue;
+    uint8_t block_ptr;
+    uint32_t block_id;
+    uint32_t residual_space;
 }LogBlock;
 
 
 typedef struct LogSegment
 {
-    LogBlock logBlocks[MAX];//max log blocks
-    StoreStats storeStats;
+    LogBlock log_blocks[MAX];//max log blocks
+    StoreStats store_stats;
     
-    uint32_t numPages;  // change name?
-    uint32_t usingPage;
+    uint32_t num_pages;  // change name?
+    uint32_t using_page;
     uint32_t offset;
     uint8_t round;
 }LogSegment;
@@ -40,9 +40,9 @@ class Log
 {
 private:
 public:
-    LogSegment logSegment[MAX];//max thread
-    uint16_t totalNumPage; // change name?
-    uint16_t resizingPointer;
+    LogSegment log_segment_[MAX];//max thread
+    uint16_t total_num_page_; // change name?
+    uint16_t resizing_pointer_;
 
     Log(/* args */);
     ~Log();

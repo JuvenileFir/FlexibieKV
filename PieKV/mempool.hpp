@@ -37,7 +37,7 @@ public:
     ~MemPool();
 
     temp getBlockSize();
-    temp getBlockPtr();
+    temp get_block_ptr();
     temp getAvailableNum();
     temp getPartitionTail();
     temp allocBlock();
@@ -51,10 +51,10 @@ MemPool::MemPool(/* args */)
 
 MemPool::~MemPool()
 {
-    for (size_t page_id = 0; page_id < mempool.numPages; page_id++) {
+    for (size_t page_id = 0; page_id < mempool.num_pages; page_id++) {
         free(mempool.memPages[page_id].addr);
     }
-    mempool.numPages = 0;
+    mempool.num_pages = 0;
 }
 
 
