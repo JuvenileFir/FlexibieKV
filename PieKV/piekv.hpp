@@ -14,11 +14,11 @@ private:
 public:
     Piekv(/* args */);
     ~Piekv();
-    temp H2L();
-    temp L2H();
-    temp memFlowingController();
-    temp get();
-    temp set();
+    bool H2L(size_t num_pages);   // Q: is num_pages still needed?
+    bool L2H(size_t num_pages);   // Q: is num_pages still needed?
+    void memFlowingController();
+    bool get();
+    bool set();
 };
 
 Piekv::Piekv(/* args */)
