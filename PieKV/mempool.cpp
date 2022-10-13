@@ -57,3 +57,11 @@ uint32_t MemPool::getBlockAvailableNum()
 {
     return (blockNum - blockNumInUse);
 }
+
+
+
+
+LogBlock *MemPool::locateItem(const uint32_t blockNumber, uint64_t logOffset)
+{
+    return (LogBlock *)(getBlockPtr(blockNumber) + logOffset);
+}

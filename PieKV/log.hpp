@@ -64,7 +64,6 @@ public:
 
     void shrink(uint64_t numBlockToShrink);
     void expand(TableBlock **tableblocksToMove, uint64_t numBlockToExpand, size_t blockSize);
-    temp locateItem();
 
     uint16_t get_next_resize_segment_id(int expandOrShrink); // expand: 0  shrink: 1
     void set_next_resize_segment_id(int expandOrShrink);

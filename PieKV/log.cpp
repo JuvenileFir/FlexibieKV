@@ -85,6 +85,8 @@ void Log::set_next_resize_segment_id(int expandOrShrink)
 }
 
 
+
+
 int64_t LogSegment::allocItem(uint64_t item_size) {
     // uint64_t item_size = mem_size;
     //TODO: assert(item_size == ROUNDUP8(item_size));
