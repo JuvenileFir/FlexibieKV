@@ -14,14 +14,12 @@ typedef struct StoreStats
     /* data */
 }StoreStats;
 
-typedef struct TableStats
-{
-    /* data */
-}TableStats;
+
 
 
 typedef struct LogBlock
 {
+
     uint8_t *block_ptr;
     uint32_t block_id;
     uint32_t residue;
@@ -30,6 +28,7 @@ typedef struct LogBlock
 
 class LogSegment
 {
+
 private:
     /* data */
 public:
@@ -48,6 +47,7 @@ public:
 };
 
 
+
 class Log
 {
 private:
@@ -55,9 +55,11 @@ private:
 
 
 public:
+
     LogSegment *log_segments_[THREAD_NUM];
     uint64_t total_blocknum_;
     uint16_t total_segmentnum_;
+
 
     Log(/* args */);
     ~Log();

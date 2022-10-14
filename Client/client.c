@@ -713,13 +713,11 @@ static void tx_pkt_load(char *ptr, struct zipf_gen_state *zipf_state,
     // uint64_t k, get_key, //开始时1
     uint64_t get_key64, set_val64, set_key64 = *(uint64_t *)(start_set_key + t_id);
 
-    char* get_key = (char *)malloc(GET_LEN);
-    char* set_key = (char *)malloc(SET_LEN);
-    char* set_val = (char *)malloc(VALUE_LEN);
-    char* ptr_set_key = (char *)(&set_key64);
-    char* ptr_set_val = (char *)(&set_val64);
-    char* ptr_get_key = (char *)(&get_key64);
-    memcpy(ptr_set_key, start_set_key + t_id, 8);
+    char* get_key = (char *)malloc(KEY_LEN);
+    char* set_key = (char *)malloc(KEY_LEN);
+    memset(get_key, 0, KEY_LEN);
+    memset(set_key, 0, KEY_LEN);
+    
     //在一个包内，get请求是先type，然后keylen，然后key
     //set的话，先是type，然后klen，valueLen，然后key和value
          
@@ -735,7 +733,9 @@ static void tx_pkt_load(char *ptr, struct zipf_gen_state *zipf_state,
     // for (k = 0; k < number_packet_get[WORKLOAD_ID]; k++) {
 #ifndef _STATIC_WORKLOAD_
         get_key64 = (uint64_t)mehcached_zipf_next(zipf_state) + 1;
-        key_hash =XXH64(ptr_get_key,KEY_LEN,1);
+
+        memcpy(get_key, &get_key64, 8);
+        key_hash =XXH64(get_key,KEY_LEN,1);
         // printf("GET\nkey:%zu,hash:%zu\n",get_key,key_hash);
 
         // get_key = set_key;//??? xhj  why not zipf distribution？
@@ -769,16 +769,13 @@ static void tx_pkt_load(char *ptr, struct zipf_gen_state *zipf_state,
         ptr += sizeof(uint16_t);
 
 #if defined(KV_LEN_8)
-        *(uint32_t *)(ptr) = (uint32_t)set_key64;
-
-#elif defined(KV_LEN_16)
-        *(uint64_t *)(ptr) = get_key64;
-        
+        *(uint32_t *)(ptr) = (uint32_t)get_key64;
+    
 #elif defined(KV_LEN_16) || defined(KV_LEN_24) || defined(KV_LEN_32) || defined(KV_LEN_40)
-        *(uint64_t *)(ptr) = get_key;
+        *(uint64_t *)(ptr) = get_key64;
 
 #elif defined(KV_LEN_48) || defined(KV_LEN_56) || defined(KV_LEN_64) || defined(KV_LEN_1024)
-        memcpy(ptr, ptr_get_key, KEY_LEN);
+        memcpy(ptr, get_key, KEY_LEN);
 
 #endif
         ptr += KEY_LEN;
@@ -797,7 +794,8 @@ static void tx_pkt_load(char *ptr, struct zipf_gen_state *zipf_state,
         if (set_key64 >= (uint64_t)(PER_THREAD_CNT * (t_id + 1) + PRELOAD_CNT))
             set_key64 = (uint64_t)(PER_THREAD_CNT * t_id + 1 + PRELOAD_CNT);//如果超过该线程分配的数据范围，则返回数据范围首位置
         
-        key_hash =XXH64(ptr_set_key,KEY_LEN,1);
+        memcpy(set_key, &set_key64, 8);
+        key_hash =XXH64(set_key,KEY_LEN,1);
         // printf("SET\nkey:%zu,hash:%zu\n",set_key,key_hash);
         
         *(uint16_t *)ptr = MEGA_JOB_SET;//#define MEGA_JOB_SET 0x3
@@ -812,31 +810,28 @@ static void tx_pkt_load(char *ptr, struct zipf_gen_state *zipf_state,
         *(uint64_t *)(ptr + KEY_LEN) = key_hash;
 
 #if defined(KV_LEN_8)
-        *(uint32_t *)(ptr) = (uint32_t)set_key;
+        *(uint32_t *)(ptr) = (uint32_t)set_key64;
         ptr += KEY_LEN + KEY_HASH_LEN;
-        *(uint32_t *)(ptr) = (uint32_t)set_val;
+        *(uint32_t *)(ptr) = (uint32_t)set_val64;
 
 #elif defined(KV_LEN_16)
-        *(uint64_t *)(ptr) = set_key;//16+16+16+16=64,前面正好用了64位，set的key是从2开始逐渐递增的
+        *(uint64_t *)(ptr) = set_key64;//16+16+16+16=64,前面正好用了64位，set的key是从2开始逐渐递增的
         ptr += KEY_LEN + KEY_HASH_LEN;//向后移动KEY_LEN+KEY_HASH_LEN
-        *(uint64_t *)(ptr) = set_val;//value是key+1
-
-#elif defined(KV_LEN_24) || defined(KV_LEN_32) || defined(KV_LEN_40)
-        *(uint64_t *)(ptr) = set_key;
+        *(uint64_t *)(ptr) = set_val64;//value是key+1
+#else
+    #if defined(KV_LEN_24) || defined(KV_LEN_32) || defined(KV_LEN_40)
+        *(uint64_t *)(ptr) = set_key64;
+    #elif defined(KV_LEN_48) || defined(KV_LEN_56) || defined(KV_LEN_64) || defined(KV_LEN_1024)
+        memcpy(ptr, set_key, KEY_LEN);
+    #endif
         ptr += KEY_LEN + KEY_HASH_LEN;
-        memcpy(ptr, ptr_set_val, VALUE_LEN);
-
-#elif defined(KV_LEN_48) || defined(KV_LEN_56) || defined(KV_LEN_64) || defined(KV_LEN_1024)
-        memcpy(ptr, ptr_set_key, KEY_LEN);
-        ptr += KEY_LEN + KEY_HASH_LEN;
-        memcpy(ptr, ptr_set_val, VALUE_LEN);
-
+        memcpy(ptr, &set_val64, 8);
+        memset(ptr + 8, 0, VALUE_LEN - 8);
 #endif
         ptr += VALUE_LEN;//向后移动value_len
         payload_len += SET_LEN;
 
         }
-    
     }
     *(uint64_t *)(start_set_key + t_id) = set_key64;//更新start_set_key字段
     /* pkt ending flag */
