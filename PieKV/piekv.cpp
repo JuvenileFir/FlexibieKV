@@ -32,21 +32,22 @@ bool Piekv::H2L(size_t blocknum_to_move)
 }
 
 
-bool Piekv::L2H(size_t num_pages)
+bool Piekv::L2H(size_t blocknum_to_move)
 {
     // check if log blocks are too few to shrink
     // assert(num_pages < table->stores->totalNumPage);
-    if (!(num_pages < table->stores->totalNumPage)) {
+    if (!(blocknum_to_move < table->stores->totalNumPage)) {
         fprintf(stderr, "Too few memory hold by log for expanding Hash table\n");
         usleep(500);
         return (Cbool)0;
     }
-    printf("[ARGS](L2H) to_shrink = %zu\t log = %u\t partition = %u\n", num_pages, table->stores->totalNumPage,
+    printf("[ARGS](L2H) to_shrink = %zu\t log = %u\t partition = %u\n", blocknum_to_move, table->stores->totalNumPage,
             table->num_partitions);
 
 
     // shrink store
-    store_shrink(table->stores, num_pages);
+    TableBlock **tableblocksToMove = (TableBlock **)malloc(blocknum_to_move * sizeof(TableBlock));
+    log_.Shrink(tableblocksToMove, blocknum_to_move);
 
 
     // 
@@ -63,7 +64,7 @@ bool Piekv::L2H(size_t num_pages)
 
 
     redistribute_first_long_group(table, parts, count);
-    num_pages--;
+    blocknum_to_move--;
 
     table->num_partitions += 1;
 

@@ -38,7 +38,7 @@ void Log::Expand(TableBlock **tableblocksToMove, uint64_t numBlockToExpand, size
     }
 }
 
-void Log::Shrink(uint64_t numBlockToShrink)
+void Log::Shrink(TableBlock **tableblocksToMove, uint64_t numBlockToShrink)
 {
     for(int i = 0; i < numBlockToShrink; i++) {
         // first get the segment id to resize
@@ -50,7 +50,8 @@ void Log::Shrink(uint64_t numBlockToShrink)
             __sync_fetch_and_sub((uint32_t *)&(segmentToResize->blocknum_), 1U);
             __sync_fetch_and_sub((uint16_t *)&(total_blocknum_), 1U);
 
-            // TODO: partitionMap_add removed here, should add it in Piekv::L2H
+            tableblocksToMove[i]->block_id = segmentToResize->log_blocks_[segmentToResize->blocknum_]->block_id;
+            tableblocksToMove[i]->block_ptr = segmentToResize->log_blocks_[segmentToResize->blocknum_]->block_ptr;
         }
         else {
             numBlockToShrink++;         //  try to find next usable segment

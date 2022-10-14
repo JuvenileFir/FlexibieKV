@@ -64,7 +64,7 @@ public:
     Log(/* args */);
     ~Log();
 
-    void Shrink(uint64_t numBlockToShrink);
+    void Shrink(TableBlock **tableblocksToMove, uint64_t numBlockToShrink);
     void Expand(TableBlock **tableblocksToMove, uint64_t numBlockToExpand, size_t blockSize);
 
     uint16_t get_next_resize_segment_id(int expandOrShrink); // expand: 0  shrink: 1
