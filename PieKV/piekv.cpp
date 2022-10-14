@@ -140,7 +140,7 @@ bool Piekv::get()
 }
 
 
-bool Piekv::set(uint64_t key_hash, uint8_t* key,uint32_t key_len, uint8_t* val, uint32_t val_len, bool overwrite)
+bool Piekv::set(LogSegment *segmentToSet,uint64_t key_hash, uint8_t* key,uint32_t key_len, uint8_t* val, uint32_t val_len, bool overwrite)
 {
     static int prt = 0;
     Cbool ret;
@@ -168,7 +168,7 @@ bool Piekv::set(uint64_t key_hash, uint8_t* key,uint32_t key_len, uint8_t* val, 
     uint32_t block_index = hashtable_.round_hash_.HashToBucket(key_hash);
     page_bucket *partition = (page_bucket *)hashtable_.get_block_ptr(block_index);
 
-    
+
     #ifdef _CUCKOO_
     /*
     * XXX: Temporarily, the first bucket's `unused1` of a partiton is used for
@@ -229,48 +229,8 @@ bool Piekv::set(uint64_t key_hash, uint8_t* key,uint32_t key_len, uint8_t* val, 
     assert(tp.cuckoostatus == ok);
     struct page_bucket *located_bucket = &partition[tp.bucket];
 
-    uint64_t new_item_size = (uint32_t)(sizeof(struct log_item) + ROUNDUP8(key_length) + ROUNDUP8(value_length));
-    int64_t item_offset;
 
-    item_offset = alloc_item(store, &new_item_size);
-    if (item_offset == -1) {
-        unlock_two_buckets(partition, tb);
-    #ifdef EXP_LATENCY
-        auto end = std::chrono::steady_clock::now();
-    #ifdef TRANSITION_ONLY
-        if (isTransitionPeriod) {
-        printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-        }
-    #else
-        printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-    #endif
-    #endif
-        TABLE_STAT_INC(store, set_fail);
-        return batch_full;
-    } else if (item_offset == -2) {
-        unlock_two_buckets(partition, tb);
-    #ifdef EXP_LATENCY
-        auto end = std::chrono::steady_clock::now();
-    #ifdef TRANSITION_ONLY
-        if (isTransitionPeriod) {
-        printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-        }
-    #else
-        printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-    #endif
-    #endif
-        TABLE_STAT_INC(store, set_fail);
-        return batch_too_samll;
-    }
-    uint32_t page_number = store->slabs[store->usingPage].pageNumber;
-
-    log_item *new_item = (log_item *)log_item_locate(page_number, item_offset);
-    TABLE_STAT_INC(store, set_success);
-    #ifdef STORE_COLLECT_STATS
-    STORE_STAT_ADD(store, actual_used_mem, new_item_size);
-    #endif
-    new_item->item_size = new_item_size;
-    set_item(new_item, key_hash, key, (uint32_t)key_length, value, (uint32_t)value_length, expire_time);
+    segmentToSet->set_log(key_hash, key, (uint32_t)key_length, value, (uint32_t)value_length, expire_time);
 
     located_bucket->item_vec[tp.slot] = ITEM_VEC(tag, page_number, item_offset);
 
