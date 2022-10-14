@@ -3,8 +3,10 @@
 
 
 #include <cstddef>
+#include <cstdint>
+#include <cstring>
 
-
+#include "log.hpp"
 
 #define MAX_BLOCK_NUM 16384
 
@@ -16,7 +18,7 @@ typedef int temp;    // a temp type for all functions with undefined return type
 
 struct MemBlock
 {
-    void *addr;
+    void *ptr;
     uint32_t in_use;
 };
 
@@ -25,37 +27,27 @@ struct MemBlock
 class MemPool
 {
 private:
-    /* data */
+    size_t block_size_;
 
 public:
+    uint32_t blockNum;
+    uint32_t blockNumInUse;
     MemBlock memBlocks[MAX_BLOCK_NUM];
-    size_t block_size;
-    uint32_t numBlocks;
-    uint32_t numUsedBlocks;
 
     MemPool(/* args */);
     ~MemPool();
 
-    temp getBlockSize();
-    temp get_block_ptr();
-    temp getAvailableNum();
-    temp getPartitionTail();
-    temp allocBlock();
-    temp cleanBlock();
+    size_t get_block_size();
+    void *get_block_ptr(uint32_t blockNumber);   // Q: Why use uint8_t * here?
+    uint32_t get_block_available_num();
+    temp get_partition_tail();    // TODO: change its name and implement it
+    uint32_t alloc_block();
+    void memset_block(uint32_t blockNumber); //Q: a function making no sense, consider to remove it later
+
+    LogBlock *locate_item(const uint32_t blockNumber, uint64_t logOffset);  //Q:another function makes nosense, why don't locate item in Log Class? find where blockNumber come from
+
 };
 
-MemPool::MemPool(/* args */)
-{
-    
-}
-
-MemPool::~MemPool()
-{
-    for (size_t page_id = 0; page_id < mempool.num_pages; page_id++) {
-        free(mempool.memPages[page_id].addr);
-    }
-    mempool.num_pages = 0;
-}
 
 
 
