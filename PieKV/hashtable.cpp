@@ -48,9 +48,7 @@ void HashTable::ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 	size_t parts[round_hash_.S_ << 1];
 	/* once in a cycle*/
   for (int i = 0; i < blocknum_to_move; i++) {
-
-    // get all parts to move
-		round_hash_.get_parts_to_remove(parts, &count);
+		round_hash_.get_parts_to_remove(parts, &count);// get all parts to move
 		round_hash_.DelBucket();
 
 		while (1) {
@@ -61,6 +59,7 @@ void HashTable::ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 		__sync_fetch_and_sub((volatile uint32_t *)&(is_setting_), 1U);
 
 		this->redistribute_last_short_group(parts, count);
+    memset(parts, 0, sizeof(size_t) * (round_hash_.S_ << 1));
     tableblocksToMove[i]->block_id = table_blocks_[table_block_num_]->block_id;
     tableblocksToMove[i]->block_ptr = table_blocks_[table_block_num_]->block_ptr;
     table_block_num_ -= 1;
@@ -74,12 +73,12 @@ void HashTable::ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 	}
 }
 
-void HashTable::ExpandTable(size_t blockNum) {
+void HashTable::ExpandTable(size_t blocknum_to_move) {
 	size_t count;
 	size_t parts[round_hash_.S_ << 1];
 	/* once in a cycle*/
-	while (blockNum--) {
-		round_hash_.get_parts_to_add(parts, &count,);
+  for (int i = 0; i < blocknum_to_move; i++) {
+		round_hash_.get_parts_to_add(parts, &count);// get all parts to move
 		round_hash_.NewBucket();
 
 		while (1) {
@@ -90,15 +89,14 @@ void HashTable::ExpandTable(size_t blockNum) {
 		__sync_fetch_and_sub((volatile uint32_t *)&(is_setting_), 1U);
 
 		this->redistribute_first_long_group(parts, count);
+    memset(parts, 0, sizeof(size_t) * (round_hash_.S_ << 1));
 		table_block_num_++;
 
 		while (1) {
 			if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_setting_), 0U, 1U))
 				break;
 		}
-		// uint64_t v = (uint64_t)(!current_version_) << 32;
 		*(volatile uint32_t *)&(is_flexibling_) = 0U;
-		/* clean is_flexibling and flip current_version_ in a single step */
 		__sync_fetch_and_sub((volatile uint32_t *)&(is_setting_), 1U);
 	}  
 }
