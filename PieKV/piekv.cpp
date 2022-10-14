@@ -136,11 +136,118 @@ bool Piekv::L2H(size_t blocknum_to_move)
 
 bool Piekv::get()
 {
-   
+    Cbool snapshot_is_flexibling = table->is_flexibling;
+    #ifdef EXP_LATENCY
+    Cbool isTransitionPeriod = snapshot_is_flexibling;
+    auto start = std::chrono::steady_clock::now();
+    #endif
+
+    uint32_t partition_index = calc_partition_index(key_hash, (Cbool)0 ^ table->current_version);
+
+    page_bucket *partition = (page_bucket *)get_partition_head(partition_index);
+    tablePosition tp;
+    while (1) {
+    #ifdef _CUCKOO_
+        twoBucket tb = cal_two_buckets(key_hash);
+        twoSnapshot ts1;
+        while (1) {
+        ts1 = read_two_buckets_begin(partition, tb);
+        tp = cuckoo_find(partition, key_hash, tb, key, key_length);
+        if (is_snapshots_same(ts1, read_two_buckets_end(partition, tb))) break;
+        }
+    #endif
+        if (tp.cuckoostatus == failure_key_not_found) {
+        if (snapshot_is_flexibling) {
+            snapshot_is_flexibling = (Cbool)0;
+            partition_index = calc_partition_index(key_hash, (Cbool)1 ^ table->current_version);
+            partition = (page_bucket *)get_partition_head(partition_index);
+            continue;
+        }
+        TABLE_STAT_INC(store, get_notfound);
+    #ifdef EXP_LATENCY
+        auto end = std::chrono::steady_clock::now();
+    #ifdef TRANSITION_ONLY
+        if (isTransitionPeriod) {
+            printf("GET(false): [time: %lu ns]\n",
+                std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
+        }
+    #else
+        printf("GET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
+    #endif
+    #endif
+        return false;
+        }
+        assert(tp.cuckoostatus == ok);
+
+        // Cbool partial_value;
+        uint32_t expire_time;
+        page_bucket *located_bucket = &partition[tp.bucket];
+
+        uint64_t item_vec = located_bucket->item_vec[tp.slot];
+        uint64_t item_offset = ITEM_OFFSET(item_vec);
+
+        log_item *item = (log_item *)log_item_locate(PAGE(item_vec), item_offset);
+
+        expire_time = item->expire_time;
+
+        size_t key_length = ITEMKEY_LENGTH(item->kv_length_vec);
+        if (key_length > MAX_KEY_LENGTH) key_length = MAX_KEY_LENGTH;  // fix-up for possible garbage read
+
+        size_t value_length = ITEMVALUE_LENGTH(item->kv_length_vec);
+        if (value_length > MAX_VALUE_LENGTH) value_length = MAX_VALUE_LENGTH;  // fix-up for possible garbage read
+
+        // adjust value length to use
+        // *in_out_value_length = 8;
+        // if (value_length > *in_out_value_length) {
+        //   // partial_value = true;
+        //   value_length = *in_out_value_length;
+        // } else {
+        //   // partial_value = false;
+        //   // TODO: we can set this `false by defalut to emliminate this.
+        // }
+        memcpy8(out_value, item->data + ROUNDUP8(key_length), value_length);
+
+        if (is_entry_expired(located_bucket->item_vec[tp.slot])) {
+        if (!is_snapshots_same(ts1, read_two_buckets_end(partition, tb))) continue;
+
+        TABLE_STAT_INC(store, get_notfound);
+    #ifdef EXP_LATENCY
+        auto end = std::chrono::steady_clock::now();
+    #ifdef TRANSITION_ONLY
+        if (isTransitionPeriod) {
+            printf("GET(false): [time: %lu ns]\n",
+                std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
+        }
+    #else
+        printf("GET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
+    #endif
+    #endif
+        return false;
+        }
+
+        if (!is_snapshots_same(ts1, read_two_buckets_end(partition, tb))) continue;
+
+        *in_out_value_length = value_length;
+        if (out_expire_time != NULL) *out_expire_time = expire_time;
+
+        TABLE_STAT_INC(store, get_found);
+        break;
+    }
+    #ifdef EXP_LATENCY
+    auto end = std::chrono::steady_clock::now();
+    #ifdef TRANSITION_ONLY
+    if (isTransitionPeriod) {
+        printf("GET(succ): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
+    }
+    #else
+    printf("GET(succ): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
+    #endif
+    #endif
+    return true;
 }
 
 
-bool Piekv::set(LogSegment *segmentToSet,uint64_t key_hash, uint8_t* key,uint32_t key_len, uint8_t* val, uint32_t val_len, bool overwrite)
+bool Piekv::set(LogSegment *segmentToSet, uint64_t key_hash, uint8_t* key,uint32_t key_len, uint8_t* val, uint32_t val_len, bool overwrite)
 {
     static int prt = 0;
     Cbool ret;
