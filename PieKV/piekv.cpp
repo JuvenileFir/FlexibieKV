@@ -161,7 +161,7 @@ bool Piekv::set(LogSegment *segmentToSet,uint64_t key_hash, uint8_t* key,uint32_
     int64_t ptr= hashtable_.set_table(key_hash,key,key_len);
     if (ptr = -1){
         return failure_hashtable_full;
-    } else if {
+    } else if (ptr = -2){
         return failure_already_exist;
     } else {
         Bucket *located_bucket =(Bucket *)ptr;
