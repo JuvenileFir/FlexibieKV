@@ -1,6 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <cassert>
+
+
 using namespace std;
 
 class RoundHash
@@ -11,13 +14,13 @@ private:
     uint64_t num_short_arcs_;
     uint64_t current_s_;
     uint64_t S_;
-    uint64_t S_minus_one;
+    uint64_t S_minus_one_;
     uint64_t S_log_;
     uint64_t arc_groups_;
     uint64_t lh_n, lh_l, lh_p;
     
 public:
-    RoundHash(uint32_t num);
+    RoundHash(uint32_t num, size_t S);
     ~RoundHash();
     uint64_t get_block_num();//原 NumBuckets_v()
     size_t ArcNum(uint64_t divs, uint64_t hash);

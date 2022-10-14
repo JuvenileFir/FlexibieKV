@@ -1,6 +1,6 @@
 #include "roundhash.hpp"
 
-RoundHash::RoundHash(uint32_t num){
+RoundHash::RoundHash(uint32_t num, size_t S){
 	S_ = S;
 	num_long_arcs_ = 1;
 	num_short_arc_groups_ = 0;

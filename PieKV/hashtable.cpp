@@ -7,13 +7,13 @@ HashTable::HashTable(MemPool* mempool){
 	table_block_num_ = mempool->getAvailableNum();
 	assert(table_block_num_);
 
-	round_hash_ = RoundHash(table_block_num_);
+	round_hash_ = RoundHash(table_block_num_, 8);
 
 	for (uint32_t i = 0; i < table_block_num_; i++) {
 		int32_t ret = mempool->allocBlock();
 		assert(ret + 1); 
-		table_blocks_[i].block_id = (uint32_t)ret;
-		table_blocks_[i].block_ptr = mempool->get_block_ptr(ret);
+		table_blocks_[i]->block_id = (uint32_t)ret;
+		table_blocks_[i]->block_ptr = mempool->get_block_ptr(ret);
 		mempool->cleanBlock(ret);
 	}
 }
@@ -23,22 +23,22 @@ HashTable::~HashTable(){
 }
 
 void *HashTable::get_block_ptr(uint32_t tableIndex){
-	return table_blocks_[tableIndex].block_ptr;
+	return table_blocks_[tableIndex]->block_ptr;
 }
 
 uint32_t HashTable::get_block_id(uint32_t tableIndex){
-	return table_blocks_[tableIndex].block_id;
+	return table_blocks_[tableIndex]->block_id;
 }
 
 void HashTable::AddBlock(uint8_t *pheader, uint32_t block_id){
-	table_blocks_[table_block_num_].block_ptr = pheader;
-	table_blocks_[table_block_num_].block_id = block_id;
+	table_blocks_[table_block_num_]->block_ptr = pheader;
+	table_blocks_[table_block_num_]->block_id = block_id;
 	table_block_num_++;
 }
 
 void HashTable::RemoveBlock(){
-  table_blocks_[table_block_num_-1].block_ptr = NULL;
-  table_blocks_[table_block_num_-1].block_id = -1;
+  table_blocks_[table_block_num_-1]->block_ptr = NULL;
+  table_blocks_[table_block_num_-1]->block_id = -1;
   table_block_num_--;
 }
   /* naive transplant */
@@ -47,8 +47,8 @@ void HashTable::ShrinkTable(size_t blockNum){
 	size_t parts[round_hash_.S_ << 1];
 	/* once in a cycle*/
 	while (blockNum--){
-		calculate_parts_to_remove(parts, &count, current_version_);//current_version_???
-		DelBucket_v();
+		round_hash_.calculate_parts_to_remove(parts, &count);//current_version_???
+		round_hash_.DelBucket();
 
 		while (1){
 			if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_setting_), 0U, 1U)) break;
