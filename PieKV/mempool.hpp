@@ -31,9 +31,9 @@ private:
 
 public:
 
-    uint32_t blockNum;
-    uint32_t blockNumInUse;
-    MemBlock memBlocks[MAX_BLOCK_NUM];
+    uint32_t blocknum_;
+    uint32_t blocknum_in_use_;
+    MemBlock mem_blocks_[MAX_BLOCK_NUM];
 
     MemPool(/* args */);
     ~MemPool();

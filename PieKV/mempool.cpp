@@ -19,11 +19,11 @@ MemPool::~MemPool()
 uint32_t MemPool::alloc_block()
 {
     // Q: linear search may be low-efficient here?
-    for (uint32_t i = 0; i < blockNum; i++)
+    for (uint32_t i = 0; i < blocknum_; i++)
     {
-        if (memBlocks[i].in_use == 0) {
-            memBlocks[i].in_use = 1;
-            blockNumInUse++;
+        if (mem_blocks_[i].in_use == 0) {
+            mem_blocks_[i].in_use = 1;
+            blocknum_in_use_++;
             return i;
         }
     }
@@ -36,7 +36,7 @@ uint32_t MemPool::alloc_block()
  */
 void *MemPool::get_block_ptr(uint32_t blockNumber)
 {
-    return memBlocks[blockNumber].ptr;
+    return mem_blocks_[blockNumber].ptr;
 }
 
 size_t MemPool::get_block_size()
@@ -55,7 +55,7 @@ void MemPool::memset_block(uint32_t blockNumber)
 
 uint32_t MemPool::get_block_available_num()
 {
-    return (blockNum - blockNumInUse);
+    return (blocknum_ - blocknum_in_use_);
 }
 
 
