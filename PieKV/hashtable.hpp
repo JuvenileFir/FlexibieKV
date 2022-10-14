@@ -71,7 +71,7 @@ public:
     void AddBlock(uint8_t *pheader, uint32_t block_id); //former partitionMap_add()
     void RemoveBlock();
     void ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_move);//H2L中的hashtable部分
-    void ExpandTable(size_t blocknum_to_move);//L2H中的hashtable部分
+    void ExpandTable(TableBlock **tableblocksToMove, size_t blocknum_to_move);//L2H中的hashtable部分
     void redistribute_last_short_group(size_t *parts, size_t count);
     void redistribute_first_long_group(size_t *parts, size_t count);
 

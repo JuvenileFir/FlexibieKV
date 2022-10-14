@@ -73,11 +73,12 @@ void HashTable::ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 	}
 }
 
-void HashTable::ExpandTable(size_t blocknum_to_move) {
+void HashTable::ExpandTable(TableBlock **tableblocksToMove, size_t blocknum_to_move) {
 	size_t count;
 	size_t parts[round_hash_.S_ << 1];
 	/* once in a cycle*/
   for (int i = 0; i < blocknum_to_move; i++) {
+    AddBlock(tableblocksToMove[i]->block_ptr,tableblocksToMove[i]->block_id);
 		round_hash_.get_parts_to_add(parts, &count);// get all parts to move
 		round_hash_.NewBucket();
 

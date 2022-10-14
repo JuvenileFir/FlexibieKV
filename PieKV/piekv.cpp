@@ -48,31 +48,7 @@ bool Piekv::L2H(size_t blocknum_to_move)
     // shrink store
     TableBlock **tableblocksToMove = (TableBlock **)malloc(blocknum_to_move * sizeof(TableBlock));
     log_.Shrink(tableblocksToMove, blocknum_to_move);
-
-
-    // 
-    size_t count;
-    size_t parts[S_ << 1];
-
-    get_first_long_group_parts(parts, &count, table->current_version);
-    NewBucket_v(table->current_version);
-
-    __sync_fetch_and_add((volatile uint32_t *)&(table->is_setting), 1U);
-    while (*(volatile uint32_t *)&(table->is_setting) != 1U);
-    *(volatile uint32_t *)&(table->is_flexibling) = 1U;
-    __sync_fetch_and_sub((volatile uint32_t *)&(table->is_setting), 1U);
-
-
-    redistribute_first_long_group(table, parts, count);
-    blocknum_to_move--;
-
-    table->num_partitions += 1;
-
-    // lock and change the flexible status
-    __sync_fetch_and_add((volatile uint32_t *)&(table->is_setting), 1U);
-    while (*(volatile uint32_t *)&(table->is_setting) != 1U);
-    *(volatile uint64_t *)&(table->is_flexibling) = 0;
-    __sync_fetch_and_sub((volatile uint32_t *)&(table->is_setting), 1U);
+    hashtable_.ExpandTable(tableblocksToMove, blocknum_to_move);
 
 
     return true;
