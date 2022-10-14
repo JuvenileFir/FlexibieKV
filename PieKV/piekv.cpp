@@ -158,73 +158,13 @@ bool Piekv::set(LogSegment *segmentToSet,uint64_t key_hash, uint8_t* key,uint32_
     #endif
 
     // Cbool overwriting = false;
-    /*
-    * Waiting for transition period of fliping is_flexibling and blocking
-    * is_flexibling fliping when set is operating.
-    * The fliping and sets are organized in FIFO fashion.
-    */
-
-    uint16_t tag = calc_tag(key_hash);
-    uint32_t block_index = hashtable_.round_hash_.HashToBucket(key_hash);
-    page_bucket *partition = (page_bucket *)hashtable_.get_block_ptr(block_index);
-
-
-    #ifdef _CUCKOO_
-    /*
-    * XXX: Temporarily, the first bucket's `unused1` of a partiton is used for
-    * lock this partition. When we execute a `set` that needs to displace
-    * slot(s) for an empty slot, the order of touched bucket(s) cannot be
-    * ensured in ascending order. If the KV is executing a rebalance at the
-    * same time, moving slot(s) by touching buckets in ascending order, there
-    * is the possibility for losing slot(s). So locking the partition with FIFO
-    * policy is the simplest way.
-    */
-    while (1) {
-        uint8_t v = *(volatile uint8_t *)&partition->unused1 & ~((uint8_t)1);
-        uint8_t new_v = v + (uint8_t)2;
-        if (__sync_bool_compare_and_swap((volatile uint8_t *)&partition->unused1, v, new_v)) break;
-    }
-
-    twoBucket tb = cal_two_buckets(key_hash);
-    tablePosition tp = cuckoo_insert(partition, key_hash, tag, tb, key, key_length);
-
-    // memory_barrier();
-    assert((*(volatile uint8_t *)&partition->unused1) > 1);
-    __sync_fetch_and_sub((volatile uint8_t *)&(partition->unused1), (uint8_t)2);
-    #endif
-    if (tp.cuckoostatus == failure_table_full) {
-        // TODO: support eviction
-    #ifdef EXP_LATENCY
-        auto end = std::chrono::steady_clock::now();
-    #ifdef TRANSITION_ONLY
-        if (isTransitionPeriod) {
-        printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-        }
-    #else
-        printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-    #endif
-    #endif
-        TABLE_STAT_INC(store, set_fail);
+    int64_t ptr= hashtable_.set_table(key_hash,key,key_len);
+    if (ptr = -1){
         return failure_hashtable_full;
-    }
-    if (tp.cuckoostatus == failure_key_duplicated) {
-        // TODO: support overwrite
-        // overwriting = true;
-    #ifdef _CUCKOO_
-        unlock_two_buckets(partition, tb);
-    #endif
-    #ifdef EXP_LATENCY
-        auto end = std::chrono::steady_clock::now();
-    #ifdef TRANSITION_ONLY
-        if (isTransitionPeriod) {
-        printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-        }
-    #else
-        printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-    #endif
-    #endif
-        TABLE_STAT_INC(store, set_fail);
+    } else if {
         return failure_already_exist;
+    } else {
+        Bucket *located_bucket =(Bucket *)ptr;
     }
 
     uint64_t new_item_size = (uint32_t)(sizeof(struct log_item) + ROUNDUP8(key_length) + ROUNDUP8(value_length));

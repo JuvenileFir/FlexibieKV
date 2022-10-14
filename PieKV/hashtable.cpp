@@ -104,7 +104,7 @@ void HashTable::ExpandTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 
 
 
-void HashTable::set_table(uint64_t key_hash, const uint8_t *key, size_t key_length){
+int64_t HashTable::set_table(uint64_t key_hash, const uint8_t *key, size_t key_length){
   /*
    * XXX: Temporarily, the first bucket's `unused1` of a partiton is used for
    * lock this partition. When we execute a `set` that needs to displace
@@ -145,7 +145,7 @@ void HashTable::set_table(uint64_t key_hash, const uint8_t *key, size_t key_leng
 #endif
 #endif
     TABLE_STAT_INC(store, set_fail);
-    return failure_hashtable_full;
+    return -1;
   }
   if (tp.cuckoostatus == failure_key_duplicated) {
     // TODO: support overwrite
@@ -162,11 +162,10 @@ void HashTable::set_table(uint64_t key_hash, const uint8_t *key, size_t key_leng
 #endif
 #endif
     TABLE_STAT_INC(store, set_fail);
-    return failure_already_exist;
-    assert(tp.cuckoostatus == ok); 
-    Bucket *located_bucket = &partition[tp.bucket];
-
+    return -2;
   }
+  assert(tp.cuckoostatus == ok); 
+  return &bucket[tp.bucket];
  
 }
 
