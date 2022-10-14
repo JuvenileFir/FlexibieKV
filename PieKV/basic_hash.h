@@ -1,7 +1,5 @@
 #pragma once
 
-#include "shm.h"
-
 #include <stdint.h>
 
 #define TAG_MASK (((uint64_t)1 << 15) - 1)

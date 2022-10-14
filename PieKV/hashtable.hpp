@@ -55,6 +55,7 @@ class HashTable
 {
 private:
     /* hash table data */
+public:
     TableBlock *table_blocks_[MAX_BLOCK_NUM - 1];//
     TableStats table_stats_;
     RoundHash round_hash_;
@@ -62,7 +63,7 @@ private:
     uint32_t is_setting_;
     uint32_t is_flexibling_;
     uint32_t current_version_;
-public:
+    
     HashTable(MemPool* mempool);
     ~HashTable();
     void *get_block_ptr(uint32_t tableIndex);

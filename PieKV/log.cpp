@@ -30,10 +30,10 @@ void Log::Expand(TableBlock **tableblocksToMove, uint64_t numBlockToExpand, size
         uint16_t segmentId = get_next_resize_segment_id(0);
         LogSegment *segmentToResize = log_segments_[segmentId];
         uint32_t blockNum = segmentToResize->blocknum_;
-        segmentToResize->log_blocks_[blockNum]->block_ptr = (uint8_t *)(tableblocksToMove[i]->blockPtr);
-        segmentToResize->log_blocks_[blockNum]->block_id = tableblocksToMove[i]->blockId;
+        segmentToResize->log_blocks_[blockNum]->block_ptr = (uint8_t *)(tableblocksToMove[i]->block_ptr);
+        segmentToResize->log_blocks_[blockNum]->block_id = tableblocksToMove[i]->block_id;
         segmentToResize->log_blocks_[blockNum]->residue = blockSize;
-
+        // TODO: sync add here
 
     }
 }

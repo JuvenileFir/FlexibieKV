@@ -13,8 +13,8 @@ HashTable::HashTable(MemPool* mempool) {
 	for (uint32_t i = 0; i < table_block_num_; i++) {
 		int32_t alloc_id = mempool->allocBlock();
 		assert(alloc_id + 1); 
-		table_blocks_[i].block_id = (uint32_t)alloc_id;
-		table_blocks_[i].block_ptr = mempool->get_block_ptr(alloc_id);
+		table_blocks_[i]->block_id = (uint32_t)alloc_id;
+		table_blocks_[i]->block_ptr = mempool->get_block_ptr(alloc_id);
 		mempool->cleanBlock(alloc_id);
 	}
 }
@@ -24,22 +24,22 @@ HashTable::~HashTable() {
 }
 
 void *HashTable::get_block_ptr(uint32_t tableIndex) {
-	return table_blocks_[tableIndex].block_ptr;
+	return table_blocks_[tableIndex]->block_ptr;
 }
 
 uint32_t HashTable::get_block_id(uint32_t tableIndex) {
-	return table_blocks_[tableIndex].block_id;
+	return table_blocks_[tableIndex]->block_id;
 }
 
 void HashTable::AddBlock(uint8_t *pheader, uint32_t block_id) {
-	table_blocks_[table_block_num_].block_ptr = pheader;
-	table_blocks_[table_block_num_].block_id = block_id;
+	table_blocks_[table_block_num_]->block_ptr = pheader;
+	table_blocks_[table_block_num_]->block_id = block_id;
 	table_block_num_++;
 }
 
 void HashTable::RemoveBlock() {
-  table_blocks_[table_block_num_-1].block_ptr = NULL;
-  table_blocks_[table_block_num_-1].block_id = -1;
+  table_blocks_[table_block_num_-1]->block_ptr = NULL;
+  table_blocks_[table_block_num_-1]->block_id = -1;
   table_block_num_--;
 }
 

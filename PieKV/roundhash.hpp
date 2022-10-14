@@ -6,6 +6,8 @@ using namespace std;
 class RoundHash
 {
 private:
+    
+public:
     uint64_t num_long_arcs_;
     uint64_t num_short_arc_groups_;
     uint64_t num_short_arcs_;
@@ -15,8 +17,8 @@ private:
     uint64_t S_log_;
     uint64_t arc_groups_;
     uint64_t lh_n, lh_l, lh_p;
+
     
-public:
     RoundHash(uint32_t num);
     ~RoundHash();
     uint64_t get_block_num();//原 NumBuckets_v()
