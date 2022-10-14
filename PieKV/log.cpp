@@ -23,32 +23,32 @@ expand log segemnt by `numBlockToExpand` blocks:
 `numBlockToExpand`: the number of blocks to move
 `blocksize`: init logblocks with this blocksize
 */
-void Log::expand(TableBlock **tableblocksToMove, uint64_t numBlockToExpand, size_t blockSize)
+void Log::Expand(TableBlock **tableblocksToMove, uint64_t numBlockToExpand, size_t blockSize)
 {
     for(int i = 0; i < numBlockToExpand; i++) {
         // first get the segment id to resize
         uint16_t segmentId = get_next_resize_segment_id(0);
-        LogSegment *segmentToResize = logSegments[segmentId];
-        uint32_t blockNum = segmentToResize->blockNum;
-        segmentToResize->logBlocks[blockNum]->blockPtr = (uint8_t *)(tableblocksToMove[i]->blockPtr);
-        segmentToResize->logBlocks[blockNum]->blockId = tableblocksToMove[i]->blockId;
-        segmentToResize->logBlocks[blockNum]->Residue = blockSize;
+        LogSegment *segmentToResize = log_segments_[segmentId];
+        uint32_t blockNum = segmentToResize->blocknum_;
+        segmentToResize->log_blocks_[blockNum]->block_ptr = (uint8_t *)(tableblocksToMove[i]->blockPtr);
+        segmentToResize->log_blocks_[blockNum]->block_id = tableblocksToMove[i]->blockId;
+        segmentToResize->log_blocks_[blockNum]->residue = blockSize;
 
 
     }
 }
 
-void Log::shrink(uint64_t numBlockToShrink)
+void Log::Shrink(uint64_t numBlockToShrink)
 {
     for(int i = 0; i < numBlockToShrink; i++) {
         // first get the segment id to resize
         uint16_t segmentId = get_next_resize_segment_id(1);
-        LogSegment *segmentToResize = logSegments[segmentId];
+        LogSegment *segmentToResize = log_segments_[segmentId];
 
         // check if there is free block
-        if(segmentToResize->blockNum > 1 && segmentToResize->usingBlock < segmentToResize->blockNum - 1) {
-            __sync_fetch_and_sub((uint32_t *)&(segmentToResize->blockNum), 1U);
-            __sync_fetch_and_sub((uint16_t *)&(totalBlockNum), 1U);
+        if(segmentToResize->blocknum_ > 1 && segmentToResize->usingblock_ < segmentToResize->blocknum_ - 1) {
+            __sync_fetch_and_sub((uint32_t *)&(segmentToResize->blocknum_), 1U);
+            __sync_fetch_and_sub((uint16_t *)&(total_blocknum_), 1U);
 
             // TODO: partitionMap_add removed here, should add it in Piekv::L2H
         }
@@ -66,10 +66,10 @@ void Log::shrink(uint64_t numBlockToShrink)
 uint16_t Log::get_next_resize_segment_id(int expandOrShrink) 
 {
     if (expandOrShrink == 0) {
-        return resizingPointer;
+        return resizing_pointer_;
     }
     if (expandOrShrink == 1) {
-        return (resizingPointer + totalSegmentNum - 1) % totalSegmentNum;
+        return (resizing_pointer_ + total_segmentnum_ - 1) % total_segmentnum_;
     }
 }
 
@@ -77,29 +77,29 @@ uint16_t Log::get_next_resize_segment_id(int expandOrShrink)
 void Log::set_next_resize_segment_id(int expandOrShrink) 
 {
     if (expandOrShrink == 0) {
-        resizingPointer = (resizingPointer + 1) % totalSegmentNum;
+        resizing_pointer_ = (resizing_pointer_ + 1) % total_segmentnum_;
     }
     if (expandOrShrink == 1) {
-        resizingPointer = (resizingPointer + totalSegmentNum - 1) % totalSegmentNum;
+        resizing_pointer_ = (resizing_pointer_ + total_segmentnum_ - 1) % total_segmentnum_;
     }
 }
 
 
 
 
-int64_t LogSegment::allocItem(uint64_t item_size) {
+int64_t LogSegment::AllocItem(uint64_t item_size) {
     // uint64_t item_size = mem_size;
     //TODO: assert(item_size == ROUNDUP8(item_size));
 
     int64_t item_offset;
     if (item_size <= BATCH_SIZE) {
-        if (logBlocks[usingBlock]->Residue < item_size) {
+        if (log_blocks_[usingblock_]->residue < item_size) {
             // block in use is already filled up 
             // check if there is free block left
-            if (usingBlock < blockNum - 1) {
+            if (usingblock_ < blocknum_ - 1) {
                 // use next block
-                usingBlock++;
-                offset = 0;
+                usingblock_++;
+                offset_ = 0;
             }
             else {
                 // no free block left

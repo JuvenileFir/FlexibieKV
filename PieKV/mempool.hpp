@@ -18,8 +18,8 @@ typedef int temp;    // a temp type for all functions with undefined return type
 
 struct MemBlock
 {
-    void *addr;
-    uint32_t inUse;
+    void *ptr;
+    uint32_t in_use;
 };
 
 
@@ -27,7 +27,7 @@ struct MemBlock
 class MemPool
 {
 private:
-    size_t blockSize;
+    size_t block_size_;
 
 public:
 
@@ -38,14 +38,14 @@ public:
     MemPool(/* args */);
     ~MemPool();
 
-    size_t getBlockSize();
-    void *getBlockPtr(uint32_t blockNumber);   // Q: Why use uint8_t * here?
-    uint32_t getBlockAvailableNum();
-    temp getPartitionTail();    // TODO: change its name and implement it
-    uint32_t allocBlock();
-    void memsetBlock(uint32_t blockNumber); //Q: a function making no sense, consider to remove it later
+    size_t get_block_size();
+    void *get_block_ptr(uint32_t blockNumber);   // Q: Why use uint8_t * here?
+    uint32_t get_block_available_num();
+    temp get_partition_tail();    // TODO: change its name and implement it
+    uint32_t alloc_block();
+    void memset_block(uint32_t blockNumber); //Q: a function making no sense, consider to remove it later
 
-    LogBlock *locateItem(const uint32_t blockNumber, uint64_t logOffset);  //Q:another function makes nosense, why don't locate item in Log Class? find where blockNumber come from
+    LogBlock *locate_item(const uint32_t blockNumber, uint64_t logOffset);  //Q:another function makes nosense, why don't locate item in Log Class? find where blockNumber come from
 
 };
 
