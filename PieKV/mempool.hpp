@@ -14,7 +14,7 @@
 
 typedef int temp;    // a temp type for all functions with undefined return types, remove it later
 
-
+// TODO: flexible block size
 
 struct MemBlock
 {

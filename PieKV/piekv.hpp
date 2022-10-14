@@ -3,6 +3,7 @@
 
 #include "hashtable.hpp"
 #include "log.hpp"
+#include "basic_hash.h"
 
 class Piekv
 {
@@ -20,7 +21,9 @@ public:
     bool L2H(size_t num_pages);   // Q: is num_pages still needed?
     void memFlowingController();
     bool get();
-    bool set();
+    bool set(uint64_t key_hash, uint8_t* key, uint32_t key_len, uint8_t* val, uint32_t val_len, bool overwrite);
+
+    bool orphan_chk();  // TODO: implement , change name
 };
 
 Piekv::Piekv(/* args */){
