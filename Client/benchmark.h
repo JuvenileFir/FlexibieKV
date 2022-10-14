@@ -66,8 +66,8 @@
 // #define KV_LEN_40
 // #define KV_LEN_48
 // #define KV_LEN_56
-// #define KV_LEN_64
-#define KV_LEN_1024
+#define KV_LEN_64
+// #define KV_LEN_1024
 
 #if defined(KV_LEN_8)
 #define KEY_LEN 4

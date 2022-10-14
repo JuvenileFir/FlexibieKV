@@ -7,9 +7,11 @@
 class Piekv
 {
 private:
-    HashTable hashTable;
-    Log log;
-    MemPool memPool;
+    HashTable hashtable_;
+    Log log_;
+    MemPool mempool_;
+    uint32_t is_running_;
+    uint32_t stop_entry_gc_;//used for stopping index entry gc when `move_h2t`???
 
 public:
     Piekv(/* args */);
@@ -21,12 +23,14 @@ public:
     bool set();
 };
 
-Piekv::Piekv(/* args */)
-{
+Piekv::Piekv(/* args */){
+    
+    is_running_ = 1;
+    stop_entry_gc_ = 0;
+
 }
 
-Piekv::~Piekv()
-{
+Piekv::~Piekv(){
 }
 
 

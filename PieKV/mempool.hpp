@@ -30,7 +30,6 @@ private:
     size_t block_size_;
 
 public:
-
     uint32_t blockNum;
     uint32_t blockNumInUse;
     MemBlock memBlocks[MAX_BLOCK_NUM];
@@ -48,6 +47,7 @@ public:
     LogBlock *locate_item(const uint32_t blockNumber, uint64_t logOffset);  //Q:another function makes nosense, why don't locate item in Log Class? find where blockNumber come from
 
 };
+
 
 
 
