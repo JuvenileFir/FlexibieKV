@@ -10,7 +10,7 @@ void Piekv::memFlowingController()
 
 bool Piekv::H2L(size_t blocknum_to_move)
 {
-    // compare if there are too few hash blocks 
+    // check if hash blocks are too few to shrink
     // assert(num_pages < NumBuckets_v(current_version));
     if (!(blocknum_to_move < NumBuckets_v(table->current_version))) {
         fprintf(stderr, "Too few partitions for expanding Log\n");
@@ -60,7 +60,47 @@ bool Piekv::H2L(size_t blocknum_to_move)
 
 bool Piekv::L2H(size_t num_pages)
 {
+    // check if log blocks are too few to shrink
+    // assert(num_pages < table->stores->totalNumPage);
+    if (!(num_pages < table->stores->totalNumPage)) {
+        fprintf(stderr, "Too few memory hold by log for expanding Hash table\n");
+        usleep(500);
+        return (Cbool)0;
+    }
+    printf("[ARGS](L2H) to_shrink = %zu\t log = %u\t partition = %u\n", num_pages, table->stores->totalNumPage,
+            table->num_partitions);
 
+
+    // shrink store
+    store_shrink(table->stores, num_pages);
+
+
+    // 
+    size_t count;
+    size_t parts[S_ << 1];
+
+    get_first_long_group_parts(parts, &count, table->current_version);
+    NewBucket_v(table->current_version);
+
+    __sync_fetch_and_add((volatile uint32_t *)&(table->is_setting), 1U);
+    while (*(volatile uint32_t *)&(table->is_setting) != 1U);
+    *(volatile uint32_t *)&(table->is_flexibling) = 1U;
+    __sync_fetch_and_sub((volatile uint32_t *)&(table->is_setting), 1U);
+
+
+    redistribute_first_long_group(table, parts, count);
+    num_pages--;
+
+    table->num_partitions += 1;
+
+    // lock and change the flexible status
+    __sync_fetch_and_add((volatile uint32_t *)&(table->is_setting), 1U);
+    while (*(volatile uint32_t *)&(table->is_setting) != 1U);
+    *(volatile uint64_t *)&(table->is_flexibling) = 0;
+    __sync_fetch_and_sub((volatile uint32_t *)&(table->is_setting), 1U);
+
+
+    return true;
 }
 
 
