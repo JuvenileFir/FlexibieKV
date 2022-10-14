@@ -1,66 +1,69 @@
+#include <cassert>
 #include "hashtable.hpp"
+#include "basic_hash.h"
 
-HashTable::HashTable(MemPool* mempool){
+HashTable::HashTable(MemPool* mempool) {
 	is_setting_ = 0;
 	is_flexibling_ = 0;
 	current_version_ = 0;
 	table_block_num_ = mempool->getAvailableNum();
 	assert(table_block_num_);
-
-	round_hash_ = RoundHash(table_block_num_, 8);
+	round_hash_ = RoundHash(table_block_num_);
 
 	for (uint32_t i = 0; i < table_block_num_; i++) {
-		int32_t ret = mempool->allocBlock();
-		assert(ret + 1); 
-		table_blocks_[i]->block_id = (uint32_t)ret;
-		table_blocks_[i]->block_ptr = mempool->get_block_ptr(ret);
-		mempool->cleanBlock(ret);
+		int32_t alloc_id = mempool->allocBlock();
+		assert(alloc_id + 1); 
+		table_blocks_[i].block_id = (uint32_t)alloc_id;
+		table_blocks_[i].block_ptr = mempool->get_block_ptr(alloc_id);
+		mempool->cleanBlock(alloc_id);
 	}
 }
 
-HashTable::~HashTable(){
-  /* …… */
+HashTable::~HashTable() {
+  /* ...... */
 }
 
-void *HashTable::get_block_ptr(uint32_t tableIndex){
-	return table_blocks_[tableIndex]->block_ptr;
+void *HashTable::get_block_ptr(uint32_t tableIndex) {
+	return table_blocks_[tableIndex].block_ptr;
 }
 
-uint32_t HashTable::get_block_id(uint32_t tableIndex){
-	return table_blocks_[tableIndex]->block_id;
+uint32_t HashTable::get_block_id(uint32_t tableIndex) {
+	return table_blocks_[tableIndex].block_id;
 }
 
-void HashTable::AddBlock(uint8_t *pheader, uint32_t block_id){
-	table_blocks_[table_block_num_]->block_ptr = pheader;
-	table_blocks_[table_block_num_]->block_id = block_id;
+void HashTable::AddBlock(uint8_t *pheader, uint32_t block_id) {
+	table_blocks_[table_block_num_].block_ptr = pheader;
+	table_blocks_[table_block_num_].block_id = block_id;
 	table_block_num_++;
 }
 
-void HashTable::RemoveBlock(){
-  table_blocks_[table_block_num_-1]->block_ptr = NULL;
-  table_blocks_[table_block_num_-1]->block_id = -1;
+void HashTable::RemoveBlock() {
+  table_blocks_[table_block_num_-1].block_ptr = NULL;
+  table_blocks_[table_block_num_-1].block_id = -1;
   table_block_num_--;
 }
-  /* naive transplant */
-void HashTable::ShrinkTable(size_t blockNum){
+
+void HashTable::ShrinkTable(size_t blockNum) {
 	size_t count;
 	size_t parts[round_hash_.S_ << 1];
 	/* once in a cycle*/
-	while (blockNum--){
-		round_hash_.calculate_parts_to_remove(parts, &count);//current_version_???
+	while (blockNum--) {
+		round_hash_.get_parts_to_remove(parts, &count);
 		round_hash_.DelBucket();
 
-		while (1){
-			if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_setting_), 0U, 1U)) break;
+		while (1) {
+			if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_setting_), 0U, 1U))
+				break;
 		}
 		*(volatile uint32_t *)&(is_flexibling_) = 1U;
 		__sync_fetch_and_sub((volatile uint32_t *)&(is_setting_), 1U);
 
-		redistribute_last_short_group(parts, count);
+		this->redistribute_last_short_group(parts, count);
 		table_block_num_--;
 
-		while (1){
-			if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_setting_), 0U, 1U)) break;
+		while (1) {
+			if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_setting_), 0U, 1U))
+				break;
 		}
 		uint64_t v = (uint64_t)(!current_version_) << 32;
 		*(volatile uint64_t *)&(is_flexibling_) = v;
@@ -69,29 +72,164 @@ void HashTable::ShrinkTable(size_t blockNum){
 	}
 }
 
-void HashTable::ExpandTable(size_t blockNum){
+void HashTable::ExpandTable(size_t blockNum) {
 	size_t count;
 	size_t parts[round_hash_.S_ << 1];
 	/* once in a cycle*/
-	while (blockNum--){
-		calculate_parts_to_add(parts, &count, current_version_);
-		NewBucket_v(current_version_);
+	while (blockNum--) {
+		round_hash_.get_parts_to_add(parts, &count,);
+		round_hash_.NewBucket();
 
-		while (1){
-			if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_setting_), 0U, 1U)) break;
+		while (1) {
+			if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_setting_), 0U, 1U))
+				break;
 		}
 		*(volatile uint32_t *)&(is_flexibling_) = 1U;
 		__sync_fetch_and_sub((volatile uint32_t *)&(is_setting_), 1U);
 
-		redistribute_first_long_group(parts, count);
+		this->redistribute_first_long_group(parts, count);
 		table_block_num_++;
 
-		while (1){
-			if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_setting_), 0U, 1U)) break;
+		while (1) {
+			if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_setting_), 0U, 1U))
+				break;
 		}
 		uint64_t v = (uint64_t)(!current_version_) << 32;
 		*(volatile uint64_t *)&(is_flexibling_) = v;
 		/* clean is_flexibling and flip current_version_ in a single step */
 		__sync_fetch_and_sub((volatile uint32_t *)&(is_setting_), 1U);
 	}  
+}
+//to modify
+void HashTable::redistribute_last_short_group(size_t *parts, size_t count) {
+	uint64_t bucket_index;
+  uint32_t entry_index;
+  size_t target_p, target_e;
+  int32_t k = count - 2;
+  Bucket *bucket;
+  Bucket *workp;
+  Bucket *workb;
+  // uint8_t key[MAX_KEY_LENGTH];
+  struct log_item *item;
+  struct twoBucket tb;
+  while (k >= 0) {
+    bucket = (Bucket *)(this->get_block_ptr(parts[k]));
+    /* Go through the entire bucket blindly */
+    while (1) {
+			if (__sync_bool_compare_and_swap((volatile uint8_t *)&(bucket->lock),
+																			 (uint8_t)0, (uint8_t)1))
+				break;
+		}
+    for (bucket_index = 0; bucket_index <= BUCKETS_PER_PARTITION; bucket_index++) {//要调整的group里面的block
+      write_lock_bucket(&bucket[bucket_index]);//此bucket指block
+      for (entry_index = 0; entry_index < ITEMS_PER_BUCKET; entry_index++) {//block里面的bucket
+        if (!is_entry_expired(bucket[bucket_index].item_vec[entry_index])) {
+          item = log_item_locate(PAGE(bucket[bucket_index].item_vec[entry_index]),
+                                 ITEM_OFFSET(bucket[bucket_index].item_vec[entry_index]));
+
+          if ((target_p = calc_bucket_index(item->key_hash, (Cbool)1 ^ table->current_version)) != parts[k]) {
+            workp = (Bucket *)get_block_ptr(target_p);
+            tb = cal_two_buckets(item->key_hash);
+            tablePosition tp = cuckoo_insert(workp, item->key_hash, TAG(bucket[bucket_index].item_vec[entry_index]),
+                                             tb, item->data, ITEMKEY_LENGTH(item->kv_length_vec));
+            if (tp.cuckoostatus == failure_table_full) {
+              // TODO: support overwrite
+              // assert(false);
+              item->expire_time = EXPIRED;
+              bucket[bucket_index].item_vec[entry_index] = (uint64_t)0;
+              continue;
+            }
+            if (tp.cuckoostatus == failure_key_duplicated) {
+              // TODO: support overwrite
+              // assert(false);
+              item->expire_time = EXPIRED;
+              bucket[bucket_index].item_vec[entry_index] = (uint64_t)0;
+              unlock_two_buckets(workp, tb);
+              continue;
+            }
+            assert(tp.cuckoostatus == ok);
+
+            workb = &(workp[tp.bucket]);
+            workb->item_vec[tp.slot] = bucket[bucket_index].item_vec[entry_index];
+            unlock_two_buckets(workp, tb);
+
+            /* ToThink:
+             * For H2L, do not clean origanl hash table entry is OK.
+             * During resizing, if we check both cv(current_version)
+             * and !cv, Keeping orignal entry may shorten porbe
+             * length.
+             */
+            bucket[bucket_index].item_vec[entry_index] = (uint64_t)0;
+          }
+        }
+      }
+      write_unlock_bucket(&bucket[bucket_index]);
+    }
+    // memory_barrier();
+    assert((*(volatile uint8_t *)&bucket->lock & (uint8_t)1) == (uint8_t)1);
+    __sync_fetch_and_sub((volatile uint8_t *)&(bucket->lock), (uint8_t)1);
+    k--;
+  }
+}
+//to modify
+void HashTable::redistribute_first_long_group(size_t *parts, size_t count) {
+	int bucket_index, entry_index;
+  size_t target_p, target_e;
+  size_t k = 0;
+  Bucket *bucket;
+  Bucket *workp;
+  Bucket *workb;
+  uint8_t key[MAX_KEY_LENGTH];
+  struct log_item *item;
+  struct twoBucket tb;
+  while (k < count) {
+    bucket = (Bucket *)(this->get_block_ptr(parts[k]));
+    // Go through the entire bucket blindly
+		while (1) {
+			if (__sync_bool_compare_and_swap((volatile uint8_t *)&(bucket->lock),
+																			 (uint8_t)0, (uint8_t)1))
+				break;
+		}
+    for (bucket_index = 0; bucket_index <= BUCKETS_PER_PARTITION; bucket_index++) {
+      write_lock_bucket(&bucket[bucket_index]);
+      for (entry_index = 0; entry_index < ITEMS_PER_BUCKET; entry_index++) {
+        if (!is_entry_expired(bucket[bucket_index].item_vec[entry_index])) {
+          item = log_item_locate(PAGE(bucket[bucket_index].item_vec[entry_index]),
+                                 ITEM_OFFSET(bucket[bucket_index].item_vec[entry_index]));
+
+          if ((target_p = calc_bucket_index(item->key_hash, (Cbool)1 ^ table->current_version)) != parts[k]) {
+            workp = (struct Bucket *)get_block_ptr(target_p);
+            tb = cal_two_buckets(item->key_hash);
+            tablePosition tp = cuckoo_insert(workp, item->key_hash, TAG(bucket[bucket_index].item_vec[entry_index]),
+                                             tb, item->data, ITEMKEY_LENGTH(item->kv_length_vec));
+            if (tp.cuckoostatus == failure_table_full) {
+              // TODO: support overwrite
+              item->expire_time = EXPIRED;
+              bucket[bucket_index].item_vec[entry_index] = (uint64_t)0;
+              continue;
+            }
+            if (tp.cuckoostatus == failure_key_duplicated) {
+              // TODO: support overwrite
+              item->expire_time = EXPIRED;
+              bucket[bucket_index].item_vec[entry_index] = (uint64_t)0;
+              unlock_two_buckets(workp, tb);
+              continue;
+            }
+            assert(tp.cuckoostatus == ok);
+
+            workb = &workp[tp.bucket];
+            workb->item_vec[tp.slot] = bucket[bucket_index].item_vec[entry_index];
+            unlock_two_buckets(workp, tb);
+
+            bucket[bucket_index].item_vec[entry_index] = (uint64_t)0;
+          }
+        }
+      }
+      write_unlock_bucket(&bucket[bucket_index]);
+    }
+    // memory_barrier();
+    assert((*(volatile uint8_t *)&bucket->lock & (uint8_t)1) == (uint8_t)1);
+    __sync_fetch_and_sub((volatile uint8_t *)&(bucket->lock), (uint8_t)1);
+    k++;
+  }
 }

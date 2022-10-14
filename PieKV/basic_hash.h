@@ -72,7 +72,13 @@ uint32_t read_version_begin(const page_bucket *bucket UNUSED);
 
 uint32_t read_version_end(const page_bucket *bucket UNUSED);
 
-void write_lock_bucket(page_bucket *bucket UNUSED);
+inline void write_lock_bucket(Bucket *bucket UNUSED) {
+  while (1) {
+    uint32_t v = *(volatile uint32_t *)&bucket->version & ~1U;
+    uint32_t new_v = v | 1U;
+    if (__sync_bool_compare_and_swap((volatile uint32_t *)&bucket->version, v, new_v)) break;
+  }
+}
 
 void write_unlock_bucket(page_bucket *bucket UNUSED);
 

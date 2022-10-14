@@ -1,6 +1,6 @@
 #include "roundhash.hpp"
 
-RoundHash::RoundHash(uint32_t num, size_t S){
+RoundHash::RoundHash(uint32_t num){
 	S_ = S;
 	num_long_arcs_ = 1;
 	num_short_arc_groups_ = 0;
@@ -39,7 +39,6 @@ size_t RoundHash::ArcNum(uint64_t divs, uint64_t hash){
   uint64_t hash0 = hash & 0xffffffff;
   uint64_t low = (hash0 * divs0) >> 32;
   size_t new_num = (hash1 * divs1) + ((hash1 * divs0 + hash0 * divs1 + low) >> 32);
-
   return new_num;
 }
 
@@ -75,7 +74,8 @@ static size_t RoundHash::ArcToBucket(size_t arc_num){
     position_in_group &= S_minus_one_;
   }
   size_t dist = __builtin_ctzll(arc_group);//返回从最低位开始0的个数
-  size_t new_ret = ((S_ + position_in_group) * initial_groups_ + arc_group) >> (dist + 1);
+  size_t new_ret = ((S_ + position_in_group) * initial_groups_ + arc_group) 
+  new_ret = new_ret >> (dist + 1);
   return new_ret;
 }
 
@@ -138,16 +138,19 @@ void RoundHash::DelBucket(){
   num_long_arcs_ += current_s_;
 }
 
-void RoundHash::calculate_parts_to_remove(size_t *parts, size_t *count){
+void RoundHash::get_parts_to_remove(size_t *parts, size_t *count){
 	/* from the second to the last */
 	*count = 0;
   size_t max_arc_num = get_block_num() - 1;
   // If finish a round
   if (num_short_arc_groups_ == 0) {
     size_t actual_count = current_s_;
-    //若当前group size等于下限S_，则×2后赋值给actual_count(毕竟要shrink)(group数为1的极端情况下,赋值NumBuckets)
-    if (current_s_ == S_) actual_count = (S_ << 1) < (max_arc_num + 1) ? (S_ << 1) : max_arc_num + 1;
-    // actual_count = actual_count == S_ ? ((S_ << 1) < (max_arc_num + 1) ? (S_ << 1) : max_arc_num + 1) : actual_count;
+    //若当前group size等于下限S_，则×2后赋值给actual_count(group数为1时,赋值NumBuckets)
+    if (current_s_ == S_) 
+      actual_count = (S_ << 1) < (max_arc_num + 1) ? (S_ << 1) : max_arc_num + 1;
+    // actual_count = actual_count == S_ ? 
+    //((S_ << 1) < (max_arc_num + 1) ? (S_ << 1) : max_arc_num + 1) : 
+    //actual_count;
     for (; *count < actual_count; (*count)++) {
       parts[*count] = ArcToBucket(max_arc_num - *count);
     }
@@ -159,10 +162,9 @@ void RoundHash::calculate_parts_to_remove(size_t *parts, size_t *count){
   }
 }
 
-void RoundHash::calculate_parts_to_add(size_t *parts, size_t *count){
+void RoundHash::get_parts_to_add(size_t *parts, size_t *count){
 	/* from the last to the first */
   *count = current_s_;
-
   for (int i = current_s_ - 1; i >= 0; i--) {
     parts[i] = ArcToBucket(num_short_arcs_ + (current_s_ - 1 - i));
   }

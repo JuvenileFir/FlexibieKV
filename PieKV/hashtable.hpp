@@ -5,6 +5,11 @@
 
 #include "roundhash.hpp"
 #include "mempool.hpp"
+#include "util.h"
+
+#define MAX_KEY_LENGTH 255
+#define MAX_VALUE_LENGTH 1048575
+
 using namespace std;
 
 typedef struct TableStats
@@ -31,11 +36,11 @@ typedef struct TableStats
 typedef struct Bucket
 {
     uint32_t version;
-    uint8_t occupt_bitmap;
+    uint8_t occupy_bitmap;
     uint8_t lock;
     uint16_t padding;
     uint64_t item_vec[7];
-} Bucket;    // ALIGNED(64), use alignas(64) when imply this struct
+} Bucket ALIGNED(64);    // ALIGNED(64), use alignas(64) when imply this struct
 
 
 typedef struct TableBlock
@@ -66,5 +71,7 @@ public:
     void RemoveBlock();
     void ShrinkTable(size_t blockNum);//H2L中的hashtable部分
     void ExpandTable(size_t blockNum);//L2H中的hashtable部分
+    void redistribute_last_short_group(size_t *parts, size_t count);
+    void redistribute_first_long_group(size_t *parts, size_t count);
 
 };
