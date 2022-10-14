@@ -7,6 +7,8 @@
 #include <cstring>
 
 #include "log.hpp"
+#include "util.h"
+
 
 #define MAX_BLOCK_NUM 16384
 

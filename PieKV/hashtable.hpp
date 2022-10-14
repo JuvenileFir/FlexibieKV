@@ -5,7 +5,7 @@
 
 #include "roundhash.hpp"
 #include "mempool.hpp"
-#include "util.h"
+#include "cuckoo.h"
 
 #define MAX_KEY_LENGTH 255
 #define MAX_VALUE_LENGTH 1048575
@@ -72,6 +72,8 @@ public:
     void RemoveBlock();
     void ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_move);//H2L中的hashtable部分
     void ExpandTable(TableBlock **tableblocksToMove, size_t blocknum_to_move);//L2H中的hashtable部分
+    void get_table();
+    void set_table(uint64_t key_hash, const uint8_t *key, size_t key_length);
     void redistribute_last_short_group(size_t *parts, size_t count);
     void redistribute_first_long_group(size_t *parts, size_t count);
 

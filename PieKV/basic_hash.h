@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "mempool.hpp"
 
 #define TAG_MASK (((uint64_t)1 << 15) - 1)
 #define TAG(item_vec) ((item_vec) >> 48)

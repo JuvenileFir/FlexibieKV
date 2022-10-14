@@ -226,9 +226,7 @@ bool Piekv::set(uint64_t key_hash, uint8_t* key,uint32_t key_len, uint8_t* val, 
         TABLE_STAT_INC(store, set_fail);
         return failure_already_exist;
     }
-    assert(tp.cuckoostatus == ok);
-    struct page_bucket *located_bucket = &partition[tp.bucket];
-
+c
     uint64_t new_item_size = (uint32_t)(sizeof(struct log_item) + ROUNDUP8(key_length) + ROUNDUP8(value_length));
     int64_t item_offset;
 

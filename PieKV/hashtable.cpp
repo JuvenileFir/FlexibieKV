@@ -101,6 +101,76 @@ void HashTable::ExpandTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 		__sync_fetch_and_sub((volatile uint32_t *)&(is_setting_), 1U);
 	}  
 }
+
+
+
+void HashTable::set_table(uint64_t key_hash, const uint8_t *key, size_t key_length){
+  /*
+   * XXX: Temporarily, the first bucket's `unused1` of a partiton is used for
+   * lock this partition. When we execute a `set` that needs to displace
+   * slot(s) for an empty slot, the order of touched bucket(s) cannot be
+   * ensured in ascending order. If the KV is executing a rebalance at the
+   * same time, moving slot(s) by touching buckets in ascending order, there
+   * is the possibility for losing slot(s). So locking the bucket with FIFO
+   * policy is the simplest way.
+   */
+  uint16_t tag = calc_tag(key_hash);
+  uint32_t block_index = round_hash_.HashToBucket(key_hash);
+  Bucket *bucket = (Bucket *)this->get_block_ptr(block_index);
+
+  while (1) {
+    uint8_t v = (*(volatile uint8_t *)&bucket->lock) & ~((uint8_t)1);//8bit向下取偶数
+    uint8_t new_v = v + (uint8_t)2;
+    if (__sync_bool_compare_and_swap((volatile uint8_t *)&bucket->lock, v, new_v))
+      break;
+  }
+
+  twoBucket tb = cal_two_buckets(key_hash);
+  tablePosition tp = cuckoo_insert(bucket, key_hash, tag, tb, key, key_length);
+
+  // memory_barrier();
+  assert((*(volatile uint8_t *)&bucket->lock) > 1);
+  __sync_fetch_and_sub((volatile uint8_t *)&bucket->lock, (uint8_t)2);
+
+  if (tp.cuckoostatus == failure_table_full) {
+    // TODO: support eviction
+#ifdef EXP_LATENCY
+    auto end = std::chrono::steady_clock::now();
+#ifdef TRANSITION_ONLY
+    if (isTransitionPeriod) {
+      printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
+    }
+#else
+    printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
+#endif
+#endif
+    TABLE_STAT_INC(store, set_fail);
+    return failure_hashtable_full;
+  }
+  if (tp.cuckoostatus == failure_key_duplicated) {
+    // TODO: support overwrite
+    // overwriting = true;
+    unlock_two_buckets(bucket, tb);
+#ifdef EXP_LATENCY
+    auto end = std::chrono::steady_clock::now();
+#ifdef TRANSITION_ONLY
+    if (isTransitionPeriod) {
+      printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
+    }
+#else
+    printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
+#endif
+#endif
+    TABLE_STAT_INC(store, set_fail);
+    return failure_already_exist;
+    assert(tp.cuckoostatus == ok); 
+    Bage_bucket *located_bucket = &partition[tp.bucket];
+
+  }
+ 
+}
+
+
 //to modify
 void HashTable::redistribute_last_short_group(size_t *parts, size_t count) {
 	uint64_t bucket_index;
