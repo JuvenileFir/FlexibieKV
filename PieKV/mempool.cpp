@@ -61,7 +61,7 @@ uint32_t MemPool::get_block_available_num()
 
 
 
-LogBlock *MemPool::locate_item(const uint32_t blockNumber, uint64_t logOffset)
+LogItem *MemPool::locate_item(const uint32_t blockNumber, uint64_t logOffset)
 {
-    return (LogBlock *)(get_block_ptr(blockNumber) + logOffset);
+    return (LogItem *)(get_block_ptr(blockNumber) + logOffset);
 }

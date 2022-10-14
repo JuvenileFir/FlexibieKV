@@ -47,7 +47,7 @@ public:
     uint32_t alloc_block();
     void memset_block(uint32_t blockNumber); //Q: a function making no sense, consider to remove it later
 
-    LogBlock *locate_item(const uint32_t blockNumber, uint64_t logOffset);  //Q:another function makes nosense, why don't locate item in Log Class? find where blockNumber come from
+    LogItem *locate_item(const uint32_t blockNumber, uint64_t logOffset);  //Q:another function makes nosense, why don't locate item in Log Class? find where blockNumber come from
 
 };
 

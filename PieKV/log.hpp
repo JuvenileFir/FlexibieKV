@@ -4,10 +4,33 @@
 #include <cstdint>
 #include "mempool.hpp"
 #include "hashtable.hpp"
+#include "util.h"
 
 #define MAX 100  // a temp max num, remove it later
 #define BATCH_SIZE (2097152U)
 #define THREAD_NUM 4
+
+
+typedef struct LogItem {
+    uint64_t item_size;
+    uint32_t expire_time;
+    uint32_t kv_length_vec;
+    /* key_length: 8, value_length: 24; kv_length_vec == 0: empty item */
+
+    #define ITEMKEY_MASK (((uint32_t)1 << 8) - 1)
+    #define ITEMKEY_LENGTH(kv_length_vec) ((kv_length_vec) >> 24)
+
+    #define ITEMVALUE_MASK (((uint32_t)1 << 24) - 1)
+    #define ITEMVALUE_LENGTH(kv_length_vec) ((kv_length_vec)&ITEMVALUE_MASK)
+
+    #define ITEMKV_LENGTH_VEC(key_length, value_length) (((uint32_t)(key_length) << 24) | (uint32_t)(value_length))
+
+    /* the rest is meaningful only when kv_length_vec != 0 */
+    uint64_t key_hash;
+    uint8_t data[0];
+}LogItem ALIGNED(64);
+
+
 
 typedef struct StoreStats
 {
@@ -43,7 +66,12 @@ public:
     LogSegment(/* args */);
     ~LogSegment();
 
+    
+    LogItem *locateItem(const uint32_t block_id, uint64_t log_offset);
+    void set_item(struct LogItem *item, uint64_t key_hash, const uint8_t *key, uint32_t key_length, const uint8_t *value,uint32_t value_length, uint32_t expire_time);
+
     int64_t AllocItem(uint64_t item_size);
+    int64_t set_log(uint64_t key_hash, const uint8_t *key, uint32_t key_length, const uint8_t *value,uint32_t value_length, uint32_t expire_time);
 };
 
 

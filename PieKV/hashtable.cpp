@@ -164,7 +164,7 @@ void HashTable::set_table(uint64_t key_hash, const uint8_t *key, size_t key_leng
     TABLE_STAT_INC(store, set_fail);
     return failure_already_exist;
     assert(tp.cuckoostatus == ok); 
-    Bage_bucket *located_bucket = &partition[tp.bucket];
+    Bucket *located_bucket = &partition[tp.bucket];
 
   }
  
@@ -181,7 +181,7 @@ void HashTable::redistribute_last_short_group(size_t *parts, size_t count) {
   Bucket *workp;
   Bucket *workb;
   // uint8_t key[MAX_KEY_LENGTH];
-  struct log_item *item;
+  struct LogItem *item;
   struct twoBucket tb;
   while (k >= 0) {
     bucket = (Bucket *)(this->get_block_ptr(parts[k]));
@@ -251,7 +251,7 @@ void HashTable::redistribute_first_long_group(size_t *parts, size_t count) {
   Bucket *workp;
   Bucket *workb;
   uint8_t key[MAX_KEY_LENGTH];
-  struct log_item *item;
+  struct LogItem *item;
   struct twoBucket tb;
   while (k < count) {
     bucket = (Bucket *)(this->get_block_ptr(parts[k]));
