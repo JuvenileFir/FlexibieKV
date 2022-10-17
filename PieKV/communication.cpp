@@ -1,9 +1,71 @@
-#include "piekv.hpp"
+#include "communication.hpp"
 
 
-void parse(){
-    
+
+RTWorker::RTWorker(/* args */)
+{
 }
+
+RTWorker::~RTWorker()
+{
+}
+
+
+void parse_get()
+{
+    if ((uint32_t)pktlen > (ETHERNET_MAX_FRAME_LEN - RESPOND_ALL_COUNTERS - GET_MAX_RETURN_LEN - MEGA_END_MARK_LEN))
+    {                                                       // bwb:超过GET返回包安全length，暂停解析，先进入发包流程;其中GET_MAX_RETURN_LEN=16，原为22 ???
+        complement_pkt(tx_bufs_pt[pkt_id], tx_ptr, pktlen); //此行补全了上一行中的RESPOND_COUNTERSE和END_MARK
+        pkt_id++;
+        pktlen = EIU_HEADER_LEN;
+        if (pkt_id == PKG_GEN_COUNT)
+        {
+            for (int k = 0; k < PKG_GEN_COUNT; k++)
+            {
+                #ifdef _DUMP_PKT_SEND
+                    pkt_content_dump(tx_bufs_pt[k]);
+                #endif
+                check_pkt_end(tx_bufs_pt[k]);
+            }
+            nb_tx = rte_eth_tx_burst(port, t_id, tx_bufs_pt, PKG_GEN_COUNT);
+            core_statistics[core_id].tx += nb_tx;
+            pkt_id = 0;
+        }
+        tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + EIU_HEADER_LEN;
+        pktlen += 8; // store response counter in IP pkts.//
+        tx_ptr += 8;
+    }
+    key_len = *(uint16_t *)(ptr + PROTOCOL_TYPE_LEN);
+    key_hash_len = *(uint16_t *)(ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN);
+    key_hash = *(uint64_t *)(ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN + key_len);
+
+    // key_hash = XXH64(ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN, key_len, 1);//bwb:xxh 是一种快速hash算法
+    ret = get(table, store, key_hash, ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN, key_len,
+              tx_ptr + PROTOCOL_HEADER_LEN + key_len,                                       // bwb:调用get()写入val
+              (uint32_t *)(tx_ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN), NULL, false); // bwb:此行第一个参数指针的作用时写入val_len
+    if (ret)
+    {
+        get_succ++;
+        val_len = *(uint32_t *)(tx_ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN);
+        *(uint16_t *)tx_ptr = GET_SUCC;
+        tx_ptr += GET_RESPOND_LEN;
+        *(uint16_t *)tx_ptr = key_len;
+        tx_ptr += PROTOCOL_KEYLEN_LEN + PROTOCOL_VALLEN_LEN; //
+        // bwb: ↑ ↑ ↑ SET_RESPOND_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_VALLEN_LEN = PROTOCOL_HEADER_LEN(line 373)
+        memcpy(tx_ptr, ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN, key_len);
+        tx_ptr += key_len + val_len;
+        pktlen += PROTOCOL_HEADER_LEN + key_len + val_len; //此行指347行中的16B/22B?
+    }
+    else
+    {
+        get_fail++;
+        *(uint16_t *)tx_ptr = GET_FAIL;
+        tx_ptr += GET_RESPOND_LEN;
+        pktlen += GET_RESPOND_LEN;
+    }
+    ptr += PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN + key_len + key_hash_len;
+}
+
 
 void set_mt(hash_table *table, SlabStore *store, size_t t_id) {
   int core_id = t_id;
@@ -22,8 +84,7 @@ void set_mt(hash_table *table, SlabStore *store, size_t t_id) {
   struct rte_ipv4_hdr *ip_hdr;
   struct rte_udp_hdr *udph;
 
-  struct rte_mbuf *tx_bufs_pt[PKG_GEN_COUNT];
-  struct rte_mbuf *rx_buf[BURST_SIZE];
+
 
   for (int i = 0; i < PKG_GEN_COUNT; i++) {
     struct rte_mbuf *pkt = (struct rte_mbuf *)rte_pktmbuf_alloc((struct rte_mempool *)send_mbuf_pool);
@@ -182,53 +243,9 @@ void set_mt(hash_table *table, SlabStore *store, size_t t_id) {
         udph = (struct rte_udp_hdr *)((char *)rte_pktmbuf_mtod(rx_buf[i], char *) + sizeof(struct rte_ether_hdr) +
                                       sizeof(struct rte_ipv4_hdr));
         while (*(uint16_t *)ptr != MEGA_PKT_END) {
-          if (*(uint16_t *)ptr == MEGA_JOB_GET) {
-            if ((uint32_t)pktlen > (ETHERNET_MAX_FRAME_LEN - RESPOND_ALL_COUNTERS - GET_MAX_RETURN_LEN - MEGA_END_MARK_LEN)) {//bwb:超过GET返回包安全length，暂停解析，先进入发包流程;其中GET_MAX_RETURN_LEN=16，原为22 ???
-              complement_pkt(tx_bufs_pt[pkt_id], tx_ptr, pktlen);//此行补全了上一行中的RESPOND_COUNTERSE和END_MARK
-              pkt_id++;
-              pktlen = EIU_HEADER_LEN;
-              if (pkt_id == PKG_GEN_COUNT) {
-                for (int k = 0; k < PKG_GEN_COUNT; k++) {
-#ifdef _DUMP_PKT_SEND
-                  pkt_content_dump(tx_bufs_pt[k]);
-#endif
-                  check_pkt_end(tx_bufs_pt[k]);
-                }
-                nb_tx = rte_eth_tx_burst(port, t_id, tx_bufs_pt, PKG_GEN_COUNT);
-                core_statistics[core_id].tx += nb_tx;
-                pkt_id = 0;
-              }
-              tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + EIU_HEADER_LEN;
-              pktlen += 8;  // store response counter in IP pkts.//
-              tx_ptr += 8;
-            }
-            key_len = *(uint16_t *)(ptr + PROTOCOL_TYPE_LEN);
-            key_hash_len = *(uint16_t *)(ptr + PROTOCOL_TYPE_LEN+ PROTOCOL_KEYLEN_LEN);
-            key_hash = *(uint64_t *)(ptr + PROTOCOL_TYPE_LEN+ PROTOCOL_KEYLEN_LEN+PROTOCOL_KEYHASHLEN_LEN+key_len);
-
-            // key_hash = XXH64(ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN, key_len, 1);//bwb:xxh 是一种快速hash算法
-            ret = get(table, store, key_hash, ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN +PROTOCOL_KEYHASHLEN_LEN, key_len,
-                      tx_ptr + PROTOCOL_HEADER_LEN + key_len,//bwb:调用get()写入val
-                      (uint32_t *)(tx_ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN), NULL, false);//bwb:此行第一个参数指针的作用时写入val_len
-            if (ret) {
-              get_succ++;
-              val_len = *(uint32_t *)(tx_ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN);
-              *(uint16_t *)tx_ptr = GET_SUCC;
-              tx_ptr += GET_RESPOND_LEN;
-              *(uint16_t *)tx_ptr = key_len;
-              tx_ptr += PROTOCOL_KEYLEN_LEN + PROTOCOL_VALLEN_LEN;//
-              //bwb: ↑ ↑ ↑ SET_RESPOND_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_VALLEN_LEN = PROTOCOL_HEADER_LEN(line 373)
-              memcpy(tx_ptr, ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN, key_len);
-              tx_ptr += key_len + val_len;
-              pktlen += PROTOCOL_HEADER_LEN + key_len + val_len;//此行指347行中的16B/22B?
-            } else {
-              get_fail++;
-              *(uint16_t *)tx_ptr = GET_FAIL;
-              tx_ptr += GET_RESPOND_LEN;
-              pktlen += GET_RESPOND_LEN;
-            }
-            ptr += PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN + key_len + key_hash_len;
-          } else if (*(uint16_t *)ptr == MEGA_JOB_SET) {
+          
+   if (*(uint16_t *)ptr == MEGA_JOB_GET) {}
+         else if (*(uint16_t *)ptr == MEGA_JOB_SET) {
             if ((uint32_t)pktlen > (ETHERNET_MAX_FRAME_LEN - RESPOND_ALL_COUNTERS - SET_MAX_RETURN_LEN - MEGA_END_MARK_LEN)) {//bwb:超过SET返回包安全length，暂停解析,先进入发包流程
               complement_pkt(tx_bufs_pt[pkt_id], tx_ptr, pktlen);
 
