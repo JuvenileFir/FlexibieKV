@@ -142,20 +142,25 @@ bool Piekv::get(LogSegment *segmentToGet, uint64_t key_hash, const uint8_t *key,
     auto start = std::chrono::steady_clock::now();
     #endif
 
-    uint32_t block_index = round_hash_.HashToBucket(key_hash);
+    uint32_t block_index = hashtable_.round_hash_.HashToBucket(key_hash);
     Bucket *bucket = (Bucket *)hashtable_.get_block_ptr(block_index);  
 
 
-    tablePosition tp;
     uint16_t tag = calc_tag(key_hash);
     
+    twoSnapshot *ts1 = (twoSnapshot *)malloc(sizeof(twoBucket));
+    twoBucket *tb = (twoBucket *)malloc(sizeof(twoBucket));
 
     while (1) {
 
-        int64_t ret = hashtable_.get_table(bucket, key_hash, key, key_length);
+        int64_t ret = hashtable_.get_table(ts1, tb, bucket, key_hash, key, key_length);
+        uint64_t item_vec;
         if (ret){
-            uint64_t item_vec = (uint64_t)ret;
-        } else{
+            item_vec = (uint64_t)ret;
+        } else if (ret == -2) {
+            continue;
+        } else {
+            segmentToGet->table_stats_->get_notfound += 1;
             return false;
         }
 
@@ -164,27 +169,7 @@ bool Piekv::get(LogSegment *segmentToGet, uint64_t key_hash, const uint8_t *key,
         
         segmentToGet->get_log(out_value,in_out_value_length,block_id,item_offset);
 
-        if (is_entry_expired(located_bucket->item_vec[tp.slot])) {
-        if (!is_snapshots_same(ts1, read_two_buckets_end(partition, tb))) continue;
-
-        TABLE_STAT_INC(store, get_notfound);
-    #ifdef EXP_LATENCY
-        auto end = std::chrono::steady_clock::now();
-    #ifdef TRANSITION_ONLY
-        if (isTransitionPeriod) {
-            printf("GET(false): [time: %lu ns]\n",
-                std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-        }
-    #else
-        printf("GET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-    #endif
-    #endif
-        return false;
-        }
-
-
-
-        if (!is_snapshots_same(ts1, read_two_buckets_end(partition, tb))) continue;
+        if (!is_snapshots_same(*ts1, read_two_buckets_end(bucket, *tb))) continue;
 
 
         break;

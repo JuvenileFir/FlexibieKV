@@ -102,23 +102,23 @@ void HashTable::ExpandTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 	}  
 }
 
-int64_t HashTable::get_table(Bucket * bucket, uint64_t key_hash, const uint8_t *key, size_t key_length){
+int64_t HashTable::get_table(twoSnapshot *ts1, twoBucket *tb, Bucket *bucket, uint64_t key_hash, const uint8_t *key, size_t key_length){
   Cbool snapshot_is_flexibling = is_flexibling_;
-  twoBucket tb = cal_two_buckets(key_hash);
-  twoSnapshot ts1;
+  tablePosition tp;
+  *tb = cal_two_buckets(key_hash);
+
   while (1) {
-    ts1 = read_two_buckets_begin(bucket, tb);
-    tp = cuckoo_find(bucket, key_hash, tb, key, key_length);
-    if (is_snapshots_same(ts1, read_two_buckets_end(bucket, tb))) break;
+    *ts1 = read_two_buckets_begin(bucket, *tb);
+    tp = cuckoo_find(bucket, key_hash, *tb, key, key_length);
+    if (is_snapshots_same(*ts1, read_two_buckets_end(bucket, *tb))) break;
   }
   if (tp.cuckoostatus == failure_key_not_found) {
     if (snapshot_is_flexibling) {
       snapshot_is_flexibling = (Cbool)0;
       uint32_t block_index = round_hash_.HashToBucket(key_hash);
       Bucket *bucket = (Bucket *)this->get_block_ptr(block_index);
-      continue;
+      return -2;
     }
-    TABLE_STAT_INC(store, get_notfound);
   #ifdef EXP_LATENCY
     auto end = std::chrono::steady_clock::now();
   #ifdef TRANSITION_ONLY
@@ -135,7 +135,7 @@ int64_t HashTable::get_table(Bucket * bucket, uint64_t key_hash, const uint8_t *
   assert(tp.cuckoostatus == ok);
 
   // Cbool partial_value;
-  page_bucket *located_bucket = &bucket[tp.bucket];
+  Bucket *located_bucket = &bucket[tp.bucket];
   return located_bucket->item_vec[tp.slot];
 }
 
