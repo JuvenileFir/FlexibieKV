@@ -4,6 +4,7 @@
 #include "hashtable.hpp"
 #include "log.hpp"
 #include "basic_hash.h"
+#include "cuckoo.h"
 
 class Piekv
 {

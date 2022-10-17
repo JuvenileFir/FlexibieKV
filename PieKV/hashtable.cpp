@@ -6,12 +6,12 @@ HashTable::HashTable(MemPool* mempool) {
 	is_setting_ = 0;
 	is_flexibling_ = 0;
 	current_version_ = 0;
-	table_block_num_ = mempool->getAvailableNum();
+	table_block_num_ = mempool->get_block_available_num();
 	assert(table_block_num_);
 	round_hash_ = RoundHash(table_block_num_);
 
 	for (uint32_t i = 0; i < table_block_num_; i++) {
-		int32_t alloc_id = mempool->allocBlock();
+		int32_t alloc_id = mempool->alloc_block();
 		assert(alloc_id + 1); 
 		table_blocks_[i]->block_id = (uint32_t)alloc_id;
 		table_blocks_[i]->block_ptr = mempool->get_block_ptr(alloc_id);
