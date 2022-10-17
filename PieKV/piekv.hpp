@@ -6,6 +6,15 @@
 #include "basic_hash.h"
 #include "cuckoo.h"
 
+#include <rte_eal.h>
+#include <rte_ethdev.h>
+#include <rte_cycles.h>
+#include <rte_lcore.h>
+#include <rte_mbuf.h>
+#include <rte_byteorder.h>
+#include <rte_ip.h>
+#include <rte_ether.h>
+
 class Piekv
 {
 private:
