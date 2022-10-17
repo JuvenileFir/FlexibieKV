@@ -53,6 +53,8 @@ RTWorker::~RTWorker()
 {
 }
 
+
+
 void RTWorker::send_packet()
 {
     complement_pkt(tx_bufs_pt[pkt_id], tx_ptr, pktlen); //此行补全了上一行中的RESPOND_COUNTERSE和END_MARK
@@ -74,6 +76,10 @@ void RTWorker::send_packet()
     tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + EIU_HEADER_LEN;
     pktlen += 8; // store response counter in IP pkts.//
     tx_ptr += 8;
+}
+
+void RTWorker::parse_set(){
+  
 }
 
 void RTWorker::parse_get()
