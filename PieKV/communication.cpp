@@ -79,7 +79,43 @@ void RTWorker::send_packet()
 }
 
 void RTWorker::parse_set(){
-  
+  if ((uint32_t)pktlen > (ETHERNET_MAX_FRAME_LEN - RESPOND_ALL_COUNTERS - GET_MAX_RETURN_LEN - MEGA_END_MARK_LEN)) 
+    this->send_packet();
+    RxSet_Packet *rxset_packet = (RxSet_Packet *)ptr;
+    key_hash = *(uint64_t *)(ptr + sizeof(RxSet_Packet)+ set_packet->key_len)
+    
+    // Receive preload pkt with error content
+    if (*((uint64_t *)(ptr + PROTOCOL_HEADER_LEN)) !=
+        *((uint64_t *)(ptr + PROTOCOL_HEADER_LEN + key_len)) - 1) {
+      // ptr += PROTOCOL_HEADER_LEN + key_len + val_len;
+      // rte_pktmbuf_dump(stdout, rx_buf[i], rx_buf[i]->pkt_len);
+      // show_pkt(rx_buf[i]);
+      // assert(false);
+    }
+
+    ret = piekv_->set(t_id, key_hash, 
+                      ptr + sizeof(RxSet_Packet), set_packet->key_len,
+                      ptr + sizeof(RxSet_Packet) + set_packet->key_len + set_packet->key_hash_len,
+                       set_packet->val_len , false);
+    if (ret) {
+      rt_counter_.set_succ++;
+      *(uint16_t *)tx_ptr = SET_SUCC;
+      tx_ptr += SET_RESPOND_LEN;
+      pktlen += SET_RESPOND_LEN;
+      // rte_delay_us_block(2);
+      // rte_delay_us_sleep(1);
+      // printf("SUCC!!!t_id:%d,set_key:%lu\n",core_id,*(uint64_t *)(ptr + PROTOCOL_HEADER_LEN));
+
+
+    } else {
+      rt_counter_.set_fail++;
+
+      *(uint16_t *)tx_ptr = SET_FAIL;
+      tx_ptr += SET_RESPOND_LEN;
+      pktlen += SET_RESPOND_LEN;
+      // printf("FAIL!!!t_id:%d,set_key:%lu\n",core_id,*(uint64_t *)(ptr + PROTOCOL_HEADER_LEN));
+    }
+    ptr += PROTOCOL_HEADER_LEN + key_len+ key_hash_len + val_len;
 }
 
 void RTWorker::parse_get()
