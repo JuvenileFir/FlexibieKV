@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <cstring>
 
+#include <sys/mman.h>    // TODO: find an alternative later
+
 #include "log.hpp"
 #include "util.h"
 
@@ -37,7 +39,7 @@ public:
     uint32_t blocknum_in_use_;
     MemBlock mem_blocks_[MAX_BLOCK_NUM];
 
-    MemPool(/* args */);
+    MemPool(size_t block_size, size_t block_num_to_init);
     ~MemPool();
 
     size_t get_block_size();
