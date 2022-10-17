@@ -53,30 +53,34 @@ RTWorker::~RTWorker()
 {
 }
 
+void RTWorker::send_packet()
+{
+    complement_pkt(tx_bufs_pt[pkt_id], tx_ptr, pktlen); //此行补全了上一行中的RESPOND_COUNTERSE和END_MARK
+    pkt_id++;
+    pktlen = EIU_HEADER_LEN;
+    if (pkt_id == PKG_GEN_COUNT)
+    {
+        for (int k = 0; k < PKG_GEN_COUNT; k++)
+        {
+#ifdef _DUMP_PKT_SEND
+            pkt_content_dump(tx_bufs_pt[k]);
+#endif
+            check_pkt_end(tx_bufs_pt[k]);
+        }
+        nb_tx = rte_eth_tx_burst(port, t_id, tx_bufs_pt, PKG_GEN_COUNT);
+        core_statistics[core_id].tx += nb_tx;
+        pkt_id = 0;
+    }
+    tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + EIU_HEADER_LEN;
+    pktlen += 8; // store response counter in IP pkts.//
+    tx_ptr += 8;
+}
 
 void RTWorker::parse_get()
 {
     if ((uint32_t)pktlen > (ETHERNET_MAX_FRAME_LEN - RESPOND_ALL_COUNTERS - GET_MAX_RETURN_LEN - MEGA_END_MARK_LEN))
-    {                                                       // bwb:超过GET返回包安全length，暂停解析，先进入发包流程;其中GET_MAX_RETURN_LEN=16，原为22 ???
-        complement_pkt(tx_bufs_pt[pkt_id], tx_ptr, pktlen); //此行补全了上一行中的RESPOND_COUNTERSE和END_MARK
-        pkt_id++;
-        pktlen = EIU_HEADER_LEN;
-        if (pkt_id == PKG_GEN_COUNT)
-        {
-            for (int k = 0; k < PKG_GEN_COUNT; k++)
-            {
-                #ifdef _DUMP_PKT_SEND
-                    pkt_content_dump(tx_bufs_pt[k]);
-                #endif
-                check_pkt_end(tx_bufs_pt[k]);
-            }
-            nb_tx = rte_eth_tx_burst(port, t_id, tx_bufs_pt, PKG_GEN_COUNT);
-            core_statistics[core_id].tx += nb_tx;
-            pkt_id = 0;
-        }
-        tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + EIU_HEADER_LEN;
-        pktlen += 8; // store response counter in IP pkts.//
-        tx_ptr += 8;
+    {   // bwb:超过GET返回包安全length，暂停解析，先进入发包流程;其中GET_MAX_RETURN_LEN=16，原为22 ???
+        
     }
     key_len = *(uint16_t *)(ptr + PROTOCOL_TYPE_LEN);
     key_hash_len = *(uint16_t *)(ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN);

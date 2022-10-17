@@ -171,6 +171,8 @@ public:
     void complement_pkt(struct rte_mbuf *pkt, uint8_t *ptr, int pktlen);
     void check_pkt_end(struct rte_mbuf *pkt);
     bool pkt_filter(const struct rte_mbuf *pkt);
+
+    void send_packet();
 };
 
 
