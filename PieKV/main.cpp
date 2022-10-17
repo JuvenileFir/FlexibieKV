@@ -1,5 +1,20 @@
 #include "piekv.hpp"
 
+void sigint_handler(int sig) {
+  
+  __sync_bool_compare_and_swap((volatile Cbool *)&piekv_.is_running, 1U, 0U);
+  for (auto &t : workers) t.join();
+  printf("\n");
+  print_table_stats(&mytable);
+  printf("[INFO] Everything works fine.\n");
+  for(int i=0;i<4;i++) printf("rx_queue_%d:%ld\n",i,core_statistics[i].rx);
+  fflush(stdout);
+  show_system_status(&mytable);
+  shm_free_all();
+  exit(EXIT_SUCCESS);
+}
+
+
 int main(){
   int ch;
   size_t multiple = 10;
