@@ -53,14 +53,14 @@ void swap_uint(uint32_t *i1, uint32_t *i2) {
   *i2 = tmp;
 }
 
-struct twoSnapshot read_two_buckets_begin(page_bucket *partition, twoBucket tb) {
+struct twoSnapshot read_two_buckets_begin(Bucket *partition, twoBucket tb) {
   struct twoSnapshot ts;
   ts.v1 = read_version_begin(&partition[tb.b1]);
   ts.v2 = read_version_begin(&partition[tb.b2]);
   return ts;
 }
 
-struct twoSnapshot read_two_buckets_end(page_bucket *partition, twoBucket tb) {
+struct twoSnapshot read_two_buckets_end(Bucket *partition, twoBucket tb) {
   struct twoSnapshot ts;
   ts.v1 = read_version_end(&partition[tb.b1]);
   ts.v2 = read_version_end(&partition[tb.b2]);
@@ -69,7 +69,7 @@ struct twoSnapshot read_two_buckets_end(page_bucket *partition, twoBucket tb) {
 
 Cbool is_snapshots_same(twoSnapshot ts1, twoSnapshot ts2) { return (ts1.v1 == ts2.v1) && (ts1.v2 == ts2.v2); }
 
-void lock_two_buckets(page_bucket *partition, twoBucket twobuckets) {
+void lock_two_buckets(Bucket *partition, twoBucket twobuckets) {
   // sort_two_bucket(&twobuckets);
   // assert(twobuckets.b1 < twobuckets.b2);
   if (twobuckets.b1 > twobuckets.b2) swap_uint(&twobuckets.b1, &twobuckets.b2);
@@ -77,13 +77,13 @@ void lock_two_buckets(page_bucket *partition, twoBucket twobuckets) {
   if (twobuckets.b1 != twobuckets.b2) write_lock_bucket(&partition[twobuckets.b2]);
 }
 
-void unlock_two_buckets(page_bucket *partition, twoBucket twobuckets) {
+void unlock_two_buckets(Bucket *partition, twoBucket twobuckets) {
   // sort_two_bucket(&twobuckets);
   write_unlock_bucket(&partition[twobuckets.b1]);
   write_unlock_bucket(&partition[twobuckets.b2]);
 }
 
-void lock_three_buckets(page_bucket *partition, uint32_t b1, uint32_t b2, uint32_t extrab) {
+void lock_three_buckets(Bucket *partition, uint32_t b1, uint32_t b2, uint32_t extrab) {
   assert(b1 < b2);
   if (extrab < b2) swap_uint(&extrab, &b2);
   if (b2 < b1) swap_uint(&b1, &b2);
@@ -93,7 +93,7 @@ void lock_three_buckets(page_bucket *partition, uint32_t b1, uint32_t b2, uint32
   if (b2 != extrab) write_lock_bucket(&partition[extrab]);
 }
 
-tablePosition cuckoo_find(page_bucket *partition, uint64_t keyhash, twoBucket tb, const uint8_t *key,
+tablePosition cuckoo_find(Bucket *partition, uint64_t keyhash, twoBucket tb, const uint8_t *key,
                           uint32_t keylength) {
   uint16_t tag = calc_tag(keyhash);
 
@@ -111,7 +111,7 @@ tablePosition cuckoo_find(page_bucket *partition, uint64_t keyhash, twoBucket tb
   return tpos;
 }
 
-tablePosition cuckoo_find_shallow(page_bucket *partition, twoBucket tb, uint64_t offset, uint16_t tag) {
+tablePosition cuckoo_find_shallow(Bucket *partition, twoBucket tb, uint64_t offset, uint16_t tag) {
   struct tablePosition tpos = {tb.b1, 0, ok};
   tpos.slot = try_find_slot(&partition[tb.b1], tag, offset);
   if (tpos.slot != ITEMS_PER_BUCKET) {
@@ -126,7 +126,7 @@ tablePosition cuckoo_find_shallow(page_bucket *partition, twoBucket tb, uint64_t
   return tpos;
 }
 
-struct tablePosition cuckoo_insert(page_bucket *partition, uint64_t keyhash, uint16_t tag, struct twoBucket tb,
+struct tablePosition cuckoo_insert(Bucket *partition, uint64_t keyhash, uint16_t tag, struct twoBucket tb,
                                    const uint8_t *key, size_t keylength) {
   // tablePosition tpos;
   uint32_t res1, res2;
@@ -174,7 +174,7 @@ struct tablePosition cuckoo_insert(page_bucket *partition, uint64_t keyhash, uin
  * If run_cuckoo returns ok (success), then `tb` will be active, otherwise it
  * will not.
  */
-enum cuckooStatus run_cuckoo(page_bucket *partition, struct twoBucket tb, uint32_t *insertbucket,
+enum cuckooStatus run_cuckoo(Bucket *partition, struct twoBucket tb, uint32_t *insertbucket,
                              uint32_t *insertslot) {
   /*
    * We must unlock the buckets here, so that cuckoopath_search and
@@ -220,7 +220,7 @@ enum cuckooStatus run_cuckoo(page_bucket *partition, struct twoBucket tb, uint32
  * cuckoopath_move. Thus cuckoopath_move checks that the data matches the
  * cuckoo path before changing it.
  */
-int cuckoopath_search(page_bucket *partition, cuckooRecord *cuckoopath, const uint32_t b1, const uint32_t b2) {
+int cuckoopath_search(Bucket *partition, cuckooRecord *cuckoopath, const uint32_t b1, const uint32_t b2) {
   bSlot x = slot_search(partition, b1, b2);
   if (x.depth == -1) {
     return -1;
@@ -243,7 +243,7 @@ int cuckoopath_search(page_bucket *partition, cuckooRecord *cuckoopath, const ui
     first->bucket = b2;
   }
   {
-    page_bucket *b = &partition[first->bucket];
+    Bucket *b = &partition[first->bucket];
     write_lock_bucket(b);
     if (is_entry_expired(b->item_vec[first->slot])) {
       // We can terminate here
@@ -260,7 +260,7 @@ int cuckoopath_search(page_bucket *partition, cuckooRecord *cuckoopath, const ui
     // We get the bucket that this slot is on by computing the alternate
     // index of the previous bucket
     curr->bucket = alt_bucket(prev->bucket, prev->tag);
-    struct page_bucket *b = &partition[curr->bucket];
+    struct Bucket *b = &partition[curr->bucket];
     write_lock_bucket(b);
     if (is_entry_expired(b->item_vec[curr->slot])) {
       // We can terminate here
@@ -279,7 +279,7 @@ int cuckoopath_search(page_bucket *partition, cuckooRecord *cuckoopath, const ui
  * empty slot, adds each slot of the bucket in the bSlot. If the queue runs
  * out of space, it fails.
  */
-struct bSlot slot_search(page_bucket *partition, const uint32_t b1, const uint32_t b2) {
+struct bSlot slot_search(Bucket *partition, const uint32_t b1, const uint32_t b2) {
   bQueue que;
   que.first_ = 0;
   que.last_ = 0;
@@ -289,7 +289,7 @@ struct bSlot slot_search(page_bucket *partition, const uint32_t b1, const uint32
   enqueue(&que, (bSlot){b2, 1, 0});
   while (!empty(que)) {
     bSlot x = dequeue(&que);
-    struct page_bucket *b = &partition[x.bucket];
+    struct Bucket *b = &partition[x.bucket];
     write_lock_bucket(b);
     // Picks a (sort-of) random slot to start from
     uint32_t startingslot = x.pathcode % ITEMS_PER_BUCKET;
@@ -329,7 +329,7 @@ struct bSlot slot_search(page_bucket *partition, const uint32_t b1, const uint32
  * both insert-locked buckets remain locked. If the function is
  * unsuccessful, then both insert-locked buckets will be unlocked.
  */
-Cbool cuckoopath_move(page_bucket *partition, cuckooRecord *cuckoopath, int depth, twoBucket *tb) {
+Cbool cuckoopath_move(Bucket *partition, cuckooRecord *cuckoopath, int depth, twoBucket *tb) {
   if (depth == 0) {
     // There is a chance that depth == 0, when try_add_to_bucket sees
     // both buckets as full and cuckoopath_search finds one empty. In
@@ -374,8 +374,8 @@ Cbool cuckoopath_move(page_bucket *partition, cuckooRecord *cuckoopath, int dept
       lock_two_buckets(partition, twob);
     }
 
-    struct page_bucket *from_b = &partition[from->bucket];
-    struct page_bucket *to_b = &partition[to->bucket];
+    struct Bucket *from_b = &partition[from->bucket];
+    struct Bucket *to_b = &partition[to->bucket];
 
     /*
      * We plan to kick out fs, but let's check if it is still there;
