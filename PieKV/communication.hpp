@@ -145,12 +145,27 @@ private:
    
     int pktlen = EIU_HEADER_LEN, pkt_id = 0;
 
+    size_t t_id;
+    int core_id;
+    uint8_t *ptr = NULL;
+    uint16_t port = 0;
+    struct rte_ether_hdr *ethh;
+    struct rte_ipv4_hdr *ip_hdr;
+    struct rte_udp_hdr *udph;
+    struct rte_mbuf *pkt;
+    uint16_t nb_rx, nb_tx;
+    uint8_t *tx_ptr;
+
 public:
-    RTWorker(/* args */);
+    RTWorker(size_t t_id);
     ~RTWorker();
     void parse_get();
     void parse_set();
     void worker_proc();
+
+    void complement_pkt(struct rte_mbuf *pkt, uint8_t *ptr, int pktlen);
+    void check_pkt_end(struct rte_mbuf *pkt);
+    bool pkt_filter(const struct rte_mbuf *pkt);
 };
 
 
