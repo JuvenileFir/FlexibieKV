@@ -134,8 +134,7 @@ bool Piekv::L2H(size_t blocknum_to_move)
 }
 
 
-bool Piekv::get(LogSegment *segmentToGet, uint64_t key_hash, const uint8_t *key, size_t key_length,
-          uint8_t *out_value, uint32_t *in_out_value_length)
+bool Piekv::get(LogSegment *segmentToGet, uint64_t key_hash, const uint8_t *key, size_t key_length, uint8_t *out_value, uint32_t *in_out_value_length)
 {
     Cbool snapshot_is_flexibling = table->is_flexibling;
 
