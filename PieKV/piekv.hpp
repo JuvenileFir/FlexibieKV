@@ -20,8 +20,18 @@ private:
 public:
     uint32_t is_running_;
     
-    Piekv(/* args */);
-    ~Piekv();
+    Piekv(){
+    is_running_ = 1;
+    stop_entry_gc_ = 0;
+
+    mempool_ = MemPool();
+    log_ =  Log();
+    hashtable_ =  HashTable(*mempool_);
+    
+    }
+    ~Piekv(){
+
+    }
     bool H2L(size_t num_pages);   // Q: is num_pages still needed?
     bool L2H(size_t num_pages);   // Q: is num_pages still needed?
     void memFlowingController();
@@ -33,17 +43,6 @@ public:
     bool orphan_chk();  // TODO: implement , change name
 
 };
-
-Piekv::Piekv(/* args */){
-    
-    is_running_ = 1;
-    stop_entry_gc_ = 0;
-
-}
-
-Piekv::~Piekv(){
-}
-
 
 
 #endif
