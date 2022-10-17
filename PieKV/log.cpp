@@ -85,6 +85,22 @@ void Log::set_next_resize_segment_id(int expandOrShrink)
     }
 }
 
+void LogSegment::get_log(uint8_t *out_value, uint32_t *in_out_value_length, const uint32_t block_id, uint64_t log_offset)
+{
+    LogItem *item = locateItem(block_id, log_offset);
+    
+    size_t key_length = ITEMKEY_LENGTH(item->kv_length_vec);
+    if (key_length > MAX_KEY_LENGTH) key_length = MAX_KEY_LENGTH;
+    
+    size_t value_length = ITEMVALUE_LENGTH(item->kv_length_vec);
+    if (value_length > MAX_VALUE_LENGTH) value_length = MAX_VALUE_LENGTH;
+    
+    memcpy8(out_value, item->data + ROUNDUP8(key_length), value_length);
+    *in_out_value_length = value_length;
+    
+    table_stats_->get_found += 1;
+}
+
 
 int64_t LogSegment::set_log(uint64_t key_hash, const uint8_t *key, uint32_t key_length, const uint8_t *value,uint32_t value_length, uint32_t expire_time)
 {

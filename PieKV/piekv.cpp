@@ -134,8 +134,10 @@ bool Piekv::L2H(size_t blocknum_to_move)
 }
 
 
-bool Piekv::get()
+bool Piekv::get(LogSegment *segmentToGet, uint64_t key_hash, const uint8_t *key, size_t key_length,
+          uint8_t *out_value, uint32_t *in_out_value_length)
 {
+
     #ifdef EXP_LATENCY
     Cbool isTransitionPeriod = hashtable_.is_flexibling_;
     auto start = std::chrono::steady_clock::now();
@@ -143,6 +145,7 @@ bool Piekv::get()
 
     uint32_t block_index = round_hash_.HashToBucket(key_hash);
     Bucket *bucket = (Bucket *)hashtable_.get_block_ptr(block_index);  
+
 
     tablePosition tp;
     uint16_t tag = calc_tag(key_hash);
@@ -156,28 +159,11 @@ bool Piekv::get()
         } else{
             return false;
         }
+
+        uint32_t block_id = PAGE(item_vec);
         uint64_t item_offset = ITEM_OFFSET(item_vec);
-
-        log_item *item = (log_item *)log_item_locate(PAGE(item_vec), item_offset);
-
-        expire_time = item->expire_time;
-
-        size_t key_length = ITEMKEY_LENGTH(item->kv_length_vec);
-        if (key_length > MAX_KEY_LENGTH) key_length = MAX_KEY_LENGTH;  // fix-up for possible garbage read
-
-        size_t value_length = ITEMVALUE_LENGTH(item->kv_length_vec);
-        if (value_length > MAX_VALUE_LENGTH) value_length = MAX_VALUE_LENGTH;  // fix-up for possible garbage read
-
-        // adjust value length to use
-        // *in_out_value_length = 8;
-        // if (value_length > *in_out_value_length) {
-        //   // partial_value = true;
-        //   value_length = *in_out_value_length;
-        // } else {
-        //   // partial_value = false;
-        //   // TODO: we can set this `false by defalut to emliminate this.
-        // }
-        memcpy8(out_value, item->data + ROUNDUP8(key_length), value_length);
+        
+        segmentToGet->get_log(out_value,in_out_value_length,block_id,item_offset);
 
         if (is_entry_expired(located_bucket->item_vec[tp.slot])) {
         if (!is_snapshots_same(ts1, read_two_buckets_end(partition, tb))) continue;
@@ -197,12 +183,11 @@ bool Piekv::get()
         return false;
         }
 
+
+
         if (!is_snapshots_same(ts1, read_two_buckets_end(partition, tb))) continue;
 
-        *in_out_value_length = value_length;
-        if (out_expire_time != NULL) *out_expire_time = expire_time;
 
-        TABLE_STAT_INC(store, get_found);
         break;
     }
     #ifdef EXP_LATENCY
@@ -223,7 +208,6 @@ bool Piekv::set(LogSegment *segmentToSet, uint64_t key_hash, uint8_t* key,uint32
 {
     static int prt = 0;
     Cbool ret;
-    fkvStatus status;
     ret = orphan_chk(key_hash, key, key_len);
     if (ret) return false;  // Alreagdy exists.
 
@@ -239,9 +223,9 @@ bool Piekv::set(LogSegment *segmentToSet, uint64_t key_hash, uint8_t* key,uint32
     // Cbool overwriting = false;
     int64_t ptr = hashtable_.set_table(key_hash,key,key_len);
     if (ptr = -1){
-        return failure_hashtable_full;
+        return FAILURE_HASHTABLE_FULL;
     } else if (ptr = -2){
-        return failure_already_exist;
+        return FAILURE_ALREADY_EXIST;
     } else {
         Bucket *located_bucket =(Bucket *)ptr;
     }
