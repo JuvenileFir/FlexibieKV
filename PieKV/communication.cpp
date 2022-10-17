@@ -66,8 +66,71 @@ void parse_get()
     ptr += PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN + key_len + key_hash_len;
 }
 
+void complement_pkt(struct rte_mbuf *pkt, uint8_t *ptr, int pktlen)
+{
+    uint16_t *counter = (uint16_t *)((uint8_t *)rte_pktmbuf_mtod(pkt, uint8_t *) + EIU_HEADER_LEN);
+    // bwb: ↑ ↑ ↑ 不使用传进来的参数指针，而是重新定位data头指针赋值counter
+    *counter = get_succ;
+    get_succ = 0;
+    counter += 1;
+    *counter = set_succ;
+    set_succ = 0;
+    counter += 1;
+    *counter = get_fail;
+    get_fail = 0;
+    counter += 1;
+    *counter = set_fail;
+    set_fail = 0;
 
-void set_mt(hash_table *table, SlabStore *store, size_t t_id) {
+    pktlen += MEGA_END_MARK_LEN;
+    *(uint16_t *)ptr = MEGA_PKT_END;
+    while (pktlen < ETHERNET_MIN_FRAME_LEN)
+    {
+        ptr += MEGA_END_MARK_LEN;
+        pktlen += MEGA_END_MARK_LEN;
+        *(uint16_t *)ptr = MEGA_PKT_END;
+    }
+    pkt->data_len = pktlen; // client tx_loop中在初始化阶段即可执行(因为预先算好)
+    pkt->pkt_len = pktlen;  // client tx_loop中在初始化阶段即可执行
+
+    ip_hdr = (struct rte_ipv4_hdr *)((uint8_t *)rte_pktmbuf_mtod(pkt, uint8_t *) + sizeof(struct rte_ether_hdr));
+    ip_hdr->total_length = rte_cpu_to_be_16((uint16_t)(pktlen - sizeof(struct rte_ether_hdr)));
+    ip_hdr->hdr_checksum = rte_ipv4_cksum(ip_hdr);
+
+    udph = (struct rte_udp_hdr *)((char *)ip_hdr + sizeof(struct rte_ipv4_hdr));
+    udph->src_port = rand();
+    udph->dst_port = rand();
+    // bwb: ↓ ↓ ↓ client tx_loop中在初始化阶段即可执行
+    udph->dgram_len =
+        rte_cpu_to_be_16((uint16_t)(pktlen - sizeof(struct rte_ether_hdr) - sizeof(struct rte_ipv4_hdr)));
+    udph->dgram_cksum = rte_ipv4_udptcp_cksum(ip_hdr, udph);
+}
+
+void check_pkt_end(struct rte_mbuf *pkt)
+{
+    int pkt_len = pkt->data_len;
+    uint16_t *ptr = (uint16_t *)((uint8_t *)rte_pktmbuf_mtod(pkt, uint8_t *) + (pkt_len - 2));
+    assert(*ptr == MEGA_PKT_END);
+}
+
+bool pkt_filter(const struct rte_mbuf *pkt)
+{
+    assert(pkt);
+    struct rte_ether_hdr *ethh = (struct rte_ether_hdr *)rte_pktmbuf_mtod(pkt, unsigned char *);
+    for (int i = 0; i < 6; i++)
+    {
+        if (ethh->d_addr.addr_bytes[i] != S_Addr.addr_bytes[i] ||
+            ethh->s_addr.addr_bytes[i] != D_Addr.addr_bytes[i])
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void
+set_mt(hash_table * table, SlabStore *store, size_t t_id)
+{
   int core_id = t_id;
   if (set_core_affinity) {
     cpu_set_t mask;
@@ -142,68 +205,6 @@ void set_mt(hash_table *table, SlabStore *store, size_t t_id) {
     /* if (nb_rx != 0) 
     printf("nb_rx:%d\n",nb_rx); */
 
-      auto check_pkt_end = [&](struct rte_mbuf *pkt) {
-        int pkt_len = pkt->data_len;
-        uint16_t *ptr = (uint16_t *)((uint8_t *)rte_pktmbuf_mtod(pkt, uint8_t *) + (pkt_len - 2));
-        assert(*ptr == MEGA_PKT_END);
-        /* Verbosely check content of response pkts.
-        uint16_t key_len;
-        uint32_t val_len;
-        char *w_ptr = (char *)rte_pktmbuf_mtod(pkt, char *) + EIU_HEADER_LEN;
-        while (*(uint16_t *)w_ptr != MEGA_PKT_END) {
-          if (*(uint16_t *)w_ptr == GET_SUCC) {
-            key_len = *(uint16_t *)(w_ptr + PROTOCOL_TYPE_LEN);
-            val_len = *(uint32_t *)(w_ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN);
-            w_ptr += PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_VALLEN_LEN + key_len + val_len;
-          } else if (*(uint16_t *)w_ptr == GET_FAIL) {
-            w_ptr += SET_RESPOND_LEN;
-          } else if (*(uint16_t *)w_ptr == SET_SUCC) {
-            w_ptr += SET_RESPOND_LEN;
-          } else if (*(uint16_t *)w_ptr == SET_FAIL) {
-            w_ptr += SET_RESPOND_LEN;
-          } else {
-            // break;
-            assert(0);
-          }
-        } */
-      };
-      auto complement_pkt = [&](struct rte_mbuf *pkt, uint8_t *ptr, int pktlen) {
-        uint16_t *counter = (uint16_t *)((uint8_t *)rte_pktmbuf_mtod(pkt, uint8_t *) + EIU_HEADER_LEN);
-        //bwb: ↑ ↑ ↑ 不使用传进来的参数指针，而是重新定位data头指针赋值counter
-        *counter = get_succ;
-        get_succ = 0;
-        counter += 1;
-        *counter = set_succ;
-        set_succ = 0;
-        counter += 1;
-        *counter = get_fail;
-        get_fail = 0;
-        counter += 1;
-        *counter = set_fail;
-        set_fail = 0;
-
-        pktlen += MEGA_END_MARK_LEN;
-        *(uint16_t *)ptr = MEGA_PKT_END;
-        while (pktlen < ETHERNET_MIN_FRAME_LEN) {
-          ptr += MEGA_END_MARK_LEN;
-          pktlen += MEGA_END_MARK_LEN;
-          *(uint16_t *)ptr = MEGA_PKT_END;
-        }
-        pkt->data_len = pktlen;//client tx_loop中在初始化阶段即可执行(因为预先算好)
-        pkt->pkt_len = pktlen;//client tx_loop中在初始化阶段即可执行
-
-        ip_hdr = (struct rte_ipv4_hdr *)((uint8_t *)rte_pktmbuf_mtod(pkt, uint8_t *) + sizeof(struct rte_ether_hdr));
-        ip_hdr->total_length = rte_cpu_to_be_16((uint16_t)(pktlen - sizeof(struct rte_ether_hdr)));
-        ip_hdr->hdr_checksum = rte_ipv4_cksum(ip_hdr);
-
-        udph = (struct rte_udp_hdr *)((char *)ip_hdr + sizeof(struct rte_ipv4_hdr));
-        udph->src_port = rand();
-        udph->dst_port = rand();
-        //bwb: ↓ ↓ ↓ client tx_loop中在初始化阶段即可执行
-        udph->dgram_len =
-            rte_cpu_to_be_16((uint16_t)(pktlen - sizeof(struct rte_ether_hdr) - sizeof(struct rte_ipv4_hdr)));
-        udph->dgram_cksum = rte_ipv4_udptcp_cksum(ip_hdr, udph);
-      };
 #ifdef _DUMP_PKT
       auto pkt_content_dump = [&](struct rte_mbuf *pkt) {
         int cnt = 0;
@@ -219,17 +220,7 @@ void set_mt(hash_table *table, SlabStore *store, size_t t_id) {
         fprintf(fp[sched_getcpu()], "\n");
       };
 #endif
-      auto pkt_filter = [&](const struct rte_mbuf *pkt) -> bool {
-        assert(pkt);
-        struct rte_ether_hdr *ethh = (struct rte_ether_hdr *)rte_pktmbuf_mtod(pkt, unsigned char *);
-        for (int i = 0; i < 6; i++) {
-          if (ethh->d_addr.addr_bytes[i] != S_Addr.addr_bytes[i] ||
-              ethh->s_addr.addr_bytes[i] != D_Addr.addr_bytes[i]) {
-            return true;
-          }
-        }
-        return false;
-      };
+
       for (i = 0; i < nb_rx; i++) {
         if (pkt_filter(rx_buf[i])) {
           rte_pktmbuf_free(rx_buf[i]);
