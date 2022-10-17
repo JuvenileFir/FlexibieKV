@@ -34,7 +34,8 @@ typedef struct LogItem {
 
 typedef struct StoreStats
 {
-    /* data */
+    size_t actual_used_mem;
+    size_t wasted;
 }StoreStats;
 
 
@@ -90,7 +91,7 @@ public:
     uint16_t total_segmentnum_;
 
 
-    Log(/* args */);
+    Log(MemPool *mempool, uint64_t init_block_number);
     ~Log();
 
     void Shrink(TableBlock **tableblocksToMove, uint64_t numBlockToShrink);

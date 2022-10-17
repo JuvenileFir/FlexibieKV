@@ -3,14 +3,46 @@
 
 LogSegment::LogSegment(/* args */)
 {
+    for (int i = 0; i < MAX; i++) {
+        // TODO: use max here for temp, create an init block function later
+        log_blocks_[i] = new(LogBlock);
+    }
+    store_stats_ = new(StoreStats);
+    table_stats_ = new(TableStats);
+    blocknum_ = 0;
+    usingblock_ = 0;
+    offset_ = 0;
+    round_ = 0;
 }
 
 LogSegment::~LogSegment()
 {
 }
 
-Log::Log(/* args */)
+Log::Log(MemPool *mempool, uint64_t init_block_number)
 {
+    total_segmentnum_ = THREAD_NUM;
+    resizing_pointer_ = 0;
+
+    for (int i = 0; i < total_segmentnum_; i++) {
+        log_segments_[i] = &LogSegment();
+    }
+
+    for (int i = 0; i < init_block_number; i++) {
+        int new_block_id = mempool->alloc_block();
+        if (new_block_id == -1) break;
+
+        total_blocknum_++;
+        LogSegment *segment_in_use = log_segments_[i % total_segmentnum_];
+        int num = segment_in_use->blocknum_;
+        segment_in_use->log_blocks_[num]->block_id = new_block_id;
+        segment_in_use->log_blocks_[num]->block_ptr = (uint8_t *)mempool->get_block_ptr(new_block_id);
+        segment_in_use->log_blocks_[num]->residue = mempool->get_block_size(); // TODO : flexible block size
+        segment_in_use->blocknum_++;
+    }
+    if (total_blocknum_ < total_segmentnum_) {
+        // printf("[ERROR] too few blocks\n");
+    }
 }
 
 Log::~Log()
