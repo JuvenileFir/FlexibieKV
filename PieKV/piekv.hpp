@@ -26,8 +26,8 @@ public:
     void memFlowingController();
 
 
-    bool get(LogSegment *segmentToGet, uint64_t key_hash, const uint8_t *key, size_t key_length, uint8_t *out_value, uint32_t *in_out_value_length);
-    bool set(LogSegment *segmentToSet, uint64_t key_hash, uint8_t* key, uint32_t key_len, uint8_t* val, uint32_t val_len, bool overwrite);
+    bool get(size_t t_id, uint64_t key_hash, const uint8_t *key, size_t key_length, uint8_t *out_value, uint32_t *in_out_value_length);
+    bool set(size_t t_id, uint64_t key_hash, uint8_t* key, uint32_t key_len, uint8_t* val, uint32_t val_len, bool overwrite);
 
     bool orphan_chk();  // TODO: implement , change name
 

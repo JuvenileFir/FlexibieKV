@@ -127,13 +127,13 @@ typedef struct TxGet_Packet
 }TxGet_Packet;
 
 
-typedef struct RT_Counter_
+typedef struct RT_Counter
 {
      uint16_t get_succ = 0;
      uint16_t set_succ = 0;
      uint16_t get_fail = 0;
      uint16_t set_fail = 0;
-}RT_Counter_;
+}RT_Counter;
 
 
 
@@ -147,6 +147,8 @@ private:
     struct rte_mbuf *rx_buf[BURST_SIZE];
    
     int pktlen = EIU_HEADER_LEN, pkt_id = 0;
+
+    RT_Counter rt_counter_;
 
     size_t t_id;
     int core_id;

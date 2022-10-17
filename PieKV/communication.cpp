@@ -80,37 +80,41 @@ void RTWorker::parse_get()
 {
     if ((uint32_t)pktlen > (ETHERNET_MAX_FRAME_LEN - RESPOND_ALL_COUNTERS - GET_MAX_RETURN_LEN - MEGA_END_MARK_LEN))
     {   // bwb:超过GET返回包安全length，暂停解析，先进入发包流程;其中GET_MAX_RETURN_LEN=16，原为22 ???
-        
+        send_packet();
     }
-    key_len = *(uint16_t *)(ptr + PROTOCOL_TYPE_LEN);
-    key_hash_len = *(uint16_t *)(ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN);
-    key_hash = *(uint64_t *)(ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN + key_len);
 
-    // key_hash = XXH64(ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN, key_len, 1);//bwb:xxh 是一种快速hash算法
-    ret = get(table, store, key_hash, ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN, key_len,
-              tx_ptr + PROTOCOL_HEADER_LEN + key_len,                                       // bwb:调用get()写入val
-              (uint32_t *)(tx_ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN), NULL, false); // bwb:此行第一个参数指针的作用时写入val_len
+    RxGet_Packet *rxget_packet = (RxGet_Packet *)ptr;
+    uint64_t key_hash = *(uint64_t *)(ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN + key_len);
+    uint8_t *key = ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN; 
+
+    // perform get operation, ret represents success or not
+    bool ret = piekv_->get(t_id, 
+                    key_hash, 
+                    key, 
+                    rxget_packet->key_len, 
+                    tx_ptr + PROTOCOL_HEADER_LEN + rxget_packet->key_len,
+                    (uint32_t *)(tx_ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN)
+                );
+    
     if (ret)
     {
-        get_succ++;
-        val_len = *(uint32_t *)(tx_ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN);
-        *(uint16_t *)tx_ptr = GET_SUCC;
-        tx_ptr += GET_RESPOND_LEN;
-        *(uint16_t *)tx_ptr = key_len;
-        tx_ptr += PROTOCOL_KEYLEN_LEN + PROTOCOL_VALLEN_LEN; //
-        // bwb: ↑ ↑ ↑ SET_RESPOND_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_VALLEN_LEN = PROTOCOL_HEADER_LEN(line 373)
-        memcpy(tx_ptr, ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN, key_len);
-        tx_ptr += key_len + val_len;
-        pktlen += PROTOCOL_HEADER_LEN + key_len + val_len; //此行指347行中的16B/22B?
+        rt_counter_.get_succ += 1;
+        TxGet_Packet *txget_packet = (TxGet_Packet *)tx_ptr;
+        txget_packet->result = GET_SUCC;
+        txget_packet->key_len = rxget_packet->key_len;
+        tx_ptr += PROTOCOL_KEYLEN_LEN + PROTOCOL_VALLEN_LEN; 
+        memcpy(tx_ptr, ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN, rxget_packet->key_len);
+        tx_ptr += rxget_packet->key_len + txget_packet->val_len;
+        pktlen += PROTOCOL_HEADER_LEN + rxget_packet->key_len + txget_packet->val_len;
     }
     else
     {
-        get_fail++;
+        rt_counter_.get_fail += 1;
         *(uint16_t *)tx_ptr = GET_FAIL;
         tx_ptr += GET_RESPOND_LEN;
         pktlen += GET_RESPOND_LEN;
     }
-    ptr += PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN + key_len + key_hash_len;
+    ptr += PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN + rxget_packet->key_len + rxget_packet->key_hash_len;
 }
 
 void RTWorker::complement_pkt(struct rte_mbuf *pkt, uint8_t *ptr, int pktlen)

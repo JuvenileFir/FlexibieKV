@@ -1,9 +1,9 @@
 #include "piekv.hpp"
 
 
-bool Piekv::get(LogSegment *segmentToGet, uint64_t key_hash, const uint8_t *key, size_t key_length, uint8_t *out_value, uint32_t *in_out_value_length)
+bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key, size_t key_length, uint8_t *out_value, uint32_t *in_out_value_length)
 {
-
+    LogSegment *segmentToGet = log_.log_segments_[t_id];
     #ifdef EXP_LATENCY
     Cbool isTransitionPeriod = hashtable_.is_flexibling_;
     auto start = std::chrono::steady_clock::now();
@@ -55,8 +55,9 @@ bool Piekv::get(LogSegment *segmentToGet, uint64_t key_hash, const uint8_t *key,
 }
 
 
-bool Piekv::set(LogSegment *segmentToSet, uint64_t key_hash, uint8_t* key,uint32_t key_len, uint8_t* val, uint32_t val_len, bool overwrite)
+bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t* key,uint32_t key_len, uint8_t* val, uint32_t val_len, bool overwrite)
 {
+    LogSegment *segmentToGet = log_.log_segments_[t_id];
     static int prt = 0;
     Cbool ret;
     ret = orphan_chk(key_hash, key, key_len);
