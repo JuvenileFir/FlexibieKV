@@ -2,9 +2,9 @@
 
 
 
-RTWorker::RTWorker(size_t t_id)
+RTWorker::RTWorker(Piekv *piekv, size_t t_id)
 {
-
+    piekv_ = piekv;
     core_id = t_id;
     if (set_core_affinity)
     {

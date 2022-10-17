@@ -12,6 +12,9 @@
 #include <rte_ip.h>
 #include <rte_ether.h>
 
+
+#include "piekv.hpp"
+
 #define SET_THREAD_NUM 10
 #define GET_THREAD_NUM 18
 #define MAX_CHECKER 36
@@ -155,6 +158,8 @@ private:
     struct rte_mbuf *pkt;
     uint16_t nb_rx, nb_tx;
     uint8_t *tx_ptr;
+
+    Piekv *piekv_;
 
 public:
     RTWorker(size_t t_id);
