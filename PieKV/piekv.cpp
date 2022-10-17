@@ -136,58 +136,29 @@ bool Piekv::L2H(size_t blocknum_to_move)
 
 bool Piekv::get(LogSegment *segmentToGet, uint64_t key_hash, const uint8_t *key, size_t key_length, uint8_t *out_value, uint32_t *in_out_value_length)
 {
-    Cbool snapshot_is_flexibling = table->is_flexibling;
-
 
     #ifdef EXP_LATENCY
-    Cbool isTransitionPeriod = snapshot_is_flexibling;
+    Cbool isTransitionPeriod = hashtable_.is_flexibling_;
     auto start = std::chrono::steady_clock::now();
     #endif
 
+    uint32_t block_index = round_hash_.HashToBucket(key_hash);
+    Bucket *bucket = (Bucket *)hashtable_.get_block_ptr(block_index);  
 
 
-    uint32_t partition_index = calc_partition_index(key_hash, (Cbool)0 ^ table->current_version);
-
-    page_bucket *partition = (page_bucket *)get_partition_head(partition_index);
     tablePosition tp;
+    uint16_t tag = calc_tag(key_hash);
+    
+
     while (1) {
-    #ifdef _CUCKOO_
-        twoBucket tb = cal_two_buckets(key_hash);
-        twoSnapshot ts1;
-        while (1) {
-        ts1 = read_two_buckets_begin(partition, tb);
-        tp = cuckoo_find(partition, key_hash, tb, key, key_length);
-        if (is_snapshots_same(ts1, read_two_buckets_end(partition, tb))) break;
-        }
-    #endif
-        if (tp.cuckoostatus == failure_key_not_found) {
-        if (snapshot_is_flexibling) {
-            snapshot_is_flexibling = (Cbool)0;
-            partition_index = calc_partition_index(key_hash, (Cbool)1 ^ table->current_version);
-            partition = (page_bucket *)get_partition_head(partition_index);
-            continue;
-        }
-        TABLE_STAT_INC(store, get_notfound);
 
-    #ifdef EXP_LATENCY
-        auto end = std::chrono::steady_clock::now();
-    #ifdef TRANSITION_ONLY
-        if (isTransitionPeriod) {
-            printf("GET(false): [time: %lu ns]\n",
-                std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
+        int64_t ret = hashtable_.get_table(bucket, key_hash, key, key_length);
+        if (ret){
+            uint64_t item_vec = (uint64_t)ret;
+        } else{
+            return false;
         }
-    #else
-        printf("GET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-    #endif
-    #endif
-        return false;
-        }
-        assert(tp.cuckoostatus == ok);
 
-        // Cbool partial_value;
-        page_bucket *located_bucket = &partition[tp.bucket];
-
-        uint64_t item_vec = located_bucket->item_vec[tp.slot];
         uint32_t block_id = PAGE(item_vec);
         uint64_t item_offset = ITEM_OFFSET(item_vec);
         
@@ -249,7 +220,7 @@ bool Piekv::set(LogSegment *segmentToSet, uint64_t key_hash, uint8_t* key,uint32
     #endif
 
     // Cbool overwriting = false;
-    int64_t ptr= hashtable_.set_table(key_hash,key,key_len);
+    int64_t ptr = hashtable_.set_table(key_hash,key,key_len);
     if (ptr = -1){
         return FAILURE_HASHTABLE_FULL;
     } else if (ptr = -2){
