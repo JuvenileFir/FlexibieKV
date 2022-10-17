@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstdint> 
 #include "hashtable.hpp"
 #include "basic_hash.h"
 
@@ -15,7 +16,7 @@ HashTable::HashTable(MemPool* mempool) {
 		assert(alloc_id + 1); 
 		table_blocks_[i]->block_id = (uint32_t)alloc_id;
 		table_blocks_[i]->block_ptr = mempool->get_block_ptr(alloc_id);
-		mempool->cleanBlock(alloc_id);
+		mempool->memset_block(alloc_id);
 	}
 }
 

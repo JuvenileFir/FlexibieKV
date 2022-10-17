@@ -32,15 +32,8 @@ typedef struct TableStats
     size_t move_to_head_failed;
 }TableStats;
 
-
-typedef struct Bucket
-{
-    uint32_t version;
-    uint8_t occupy_bitmap;
-    uint8_t lock;
-    uint16_t padding;
-    uint64_t item_vec[7];
-} Bucket ALIGNED(64);    // ALIGNED(64), use alignas(64) when imply this struct
+ 
+ // ALIGNED(64), use alignas(64) when imply this struct
 
 
 typedef struct TableBlock

@@ -65,6 +65,15 @@ typedef struct page_bucket {
   // item == 0: empty item
 } page_bucket ALIGNED(64);
 
+typedef struct Bucket
+{
+    uint32_t version;
+    uint8_t occupy_bitmap;
+    uint8_t lock;
+    uint16_t padding;
+    uint64_t item_vec[7];
+} Bucket ALIGNED(64);   
+
 uint16_t calc_tag(uint64_t key_hash);
 
 uint32_t read_version_begin(const page_bucket *bucket UNUSED);
