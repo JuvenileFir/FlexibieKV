@@ -1,6 +1,5 @@
-#include "cuckoo.h"
-
 #include <assert.h>
+#include "cuckoo.h"
 
 EXTERN_BEGIN
 
