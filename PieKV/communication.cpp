@@ -53,6 +53,10 @@ RTWorker::~RTWorker()
 {
 }
 
+void RTWorker::parse_set(){
+  
+}
+
 
 void RTWorker::parse_get()
 {
