@@ -1,6 +1,7 @@
 #ifndef COMMUNICATION_HPP_
 #define COMMUNICATION_HPP_
 
+#include <cstdint>
 
 #include <rte_eal.h>
 #include <rte_ethdev.h>
@@ -96,6 +97,44 @@ const size_t page_size = 1048576 * 2;  // page size = 2 MiB
 const size_t num_pages_to_try = 240;   // SHM_MAX_PAGES;
 
 
+
+
+typedef struct RxGet_Packet
+{
+    uint16_t operation_type;
+    uint16_t key_len;
+    uint16_t key_hash_len;
+}RxGet_Packet;
+
+
+typedef struct RxSet_Packet
+{
+    uint16_t operation_type;
+    uint16_t key_len;
+    uint16_t key_hash_len;
+    uint16_t val_len;
+}RxSet_Packet;
+
+
+typedef struct TxGet_Packet
+{
+    uint16_t result;
+    uint16_t key_len;
+    uint32_t val_len;
+}TxGet_Packet;
+
+
+typedef struct RT_Counter_
+{
+     uint16_t get_succ = 0;
+     uint16_t set_succ = 0;
+     uint16_t get_fail = 0;
+     uint16_t set_fail = 0;
+}RT_Counter_;
+
+
+
+
 class RTWorker
 {
 private:
@@ -103,6 +142,8 @@ private:
     // communication
     struct rte_mbuf *tx_bufs_pt[PKG_GEN_COUNT];
     struct rte_mbuf *rx_buf[BURST_SIZE];
+   
+    int pktlen = EIU_HEADER_LEN, pkt_id = 0;
 
 public:
     RTWorker(/* args */);

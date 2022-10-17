@@ -128,8 +128,7 @@ bool pkt_filter(const struct rte_mbuf *pkt)
     return false;
 }
 
-void
-set_mt(hash_table * table, SlabStore *store, size_t t_id)
+void set_mt(hash_table * table, SlabStore *store, size_t t_id)
 {
   int core_id = t_id;
   if (set_core_affinity) {
@@ -193,8 +192,7 @@ set_mt(hash_table * table, SlabStore *store, size_t t_id)
   uint64_t key_hash;
   uint32_t key_len,key_hash_len, val_len;
   uint16_t nb_rx, nb_tx;
-  uint16_t get_succ = 0, set_succ = 0, get_fail = 0, set_fail = 0;
-  int pktlen = EIU_HEADER_LEN, pkt_id = 0;
+
   uint8_t *tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + EIU_HEADER_LEN;
   while (table->is_running) {
     nb_rx = rte_eth_rx_burst(port, t_id, rx_buf, BURST_SIZE);
