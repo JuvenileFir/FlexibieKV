@@ -13,12 +13,13 @@ private:
     HashTable hashtable_;
     Log log_;
     MemPool mempool_;
-    uint32_t is_running_;
     uint32_t stop_entry_gc_;//used for stopping index entry gc when `move_h2t`???
 
 
 
 public:
+    uint32_t is_running_;
+    
     Piekv(/* args */);
     ~Piekv();
     bool H2L(size_t num_pages);   // Q: is num_pages still needed?

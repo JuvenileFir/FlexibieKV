@@ -82,21 +82,13 @@ void RTWorker::parse_set(){
   if ((uint32_t)pktlen > (ETHERNET_MAX_FRAME_LEN - RESPOND_ALL_COUNTERS - GET_MAX_RETURN_LEN - MEGA_END_MARK_LEN)) 
     this->send_packet();
     RxSet_Packet *rxset_packet = (RxSet_Packet *)ptr;
-    key_hash = *(uint64_t *)(ptr + sizeof(RxSet_Packet)+ set_packet->key_len)
+    uint64_t key_hash = *(uint64_t *)(ptr + sizeof(RxSet_Packet)+ rxset_packet->key_len);
     
-    // Receive preload pkt with error content
-    if (*((uint64_t *)(ptr + PROTOCOL_HEADER_LEN)) !=
-        *((uint64_t *)(ptr + PROTOCOL_HEADER_LEN + key_len)) - 1) {
-      // ptr += PROTOCOL_HEADER_LEN + key_len + val_len;
-      // rte_pktmbuf_dump(stdout, rx_buf[i], rx_buf[i]->pkt_len);
-      // show_pkt(rx_buf[i]);
-      // assert(false);
-    }
 
-    ret = piekv_->set(t_id, key_hash, 
-                      ptr + sizeof(RxSet_Packet), set_packet->key_len,
-                      ptr + sizeof(RxSet_Packet) + set_packet->key_len + set_packet->key_hash_len,
-                       set_packet->val_len , false);
+    bool ret = piekv_->set(t_id, key_hash, 
+                      ptr + sizeof(RxSet_Packet), rxset_packet->key_len,
+                      ptr + sizeof(RxSet_Packet) + rxset_packet->key_len + rxset_packet->key_hash_len,
+                       rxset_packet->val_len , false);
     if (ret) {
       rt_counter_.set_succ++;
       *(uint16_t *)tx_ptr = SET_SUCC;
@@ -115,7 +107,7 @@ void RTWorker::parse_set(){
       pktlen += SET_RESPOND_LEN;
       // printf("FAIL!!!t_id:%d,set_key:%lu\n",core_id,*(uint64_t *)(ptr + PROTOCOL_HEADER_LEN));
     }
-    ptr += PROTOCOL_HEADER_LEN + key_len+ key_hash_len + val_len;
+    ptr += PROTOCOL_HEADER_LEN + rxset_packet->key_len + rxset_packet->key_hash_len + rxset_packet->val_len;
 }
 
 void RTWorker::parse_get()
@@ -126,7 +118,7 @@ void RTWorker::parse_get()
     }
 
     RxGet_Packet *rxget_packet = (RxGet_Packet *)ptr;
-    uint64_t key_hash = *(uint64_t *)(ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN + key_len);
+    uint64_t key_hash = *(uint64_t *)(ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN + rxget_packet->key_len);
     uint8_t *key = ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN; 
 
     // perform get operation, ret represents success or not
@@ -163,17 +155,17 @@ void RTWorker::complement_pkt(struct rte_mbuf *pkt, uint8_t *ptr, int pktlen)
 {
     uint16_t *counter = (uint16_t *)((uint8_t *)rte_pktmbuf_mtod(pkt, uint8_t *) + EIU_HEADER_LEN);
     // bwb: ↑ ↑ ↑ 不使用传进来的参数指针，而是重新定位data头指针赋值counter
-    *counter = get_succ;
-    get_succ = 0;
+    *counter = rt_counter_.get_succ;
+    rt_counter_.get_succ = 0;
     counter += 1;
-    *counter = set_succ;
-    set_succ = 0;
+    *counter = rt_counter_.set_succ;
+    rt_counter_.set_succ = 0;
     counter += 1;
-    *counter = get_fail;
-    get_fail = 0;
+    *counter = rt_counter_.get_fail;
+    rt_counter_.get_fail = 0;
     counter += 1;
-    *counter = set_fail;
-    set_fail = 0;
+    *counter = rt_counter_.set_fail;
+    rt_counter_.set_fail = 0;
 
     pktlen += MEGA_END_MARK_LEN;
     *(uint16_t *)ptr = MEGA_PKT_END;
@@ -229,7 +221,7 @@ void RTWorker::worker_proc()
     uint32_t key_len, key_hash_len, val_len;
 
     tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + EIU_HEADER_LEN;
-    while (table->is_running)
+    while (piekv_->is_running_)
     {
         nb_rx = rte_eth_rx_burst(port, t_id, rx_buf, BURST_SIZE);
 
@@ -277,80 +269,18 @@ void RTWorker::worker_proc()
 
                 if (*(uint16_t *)ptr == MEGA_JOB_GET)
                 {
+                    parse_get();
                 }
                 else if (*(uint16_t *)ptr == MEGA_JOB_SET)
                 {
-                    if ((uint32_t)pktlen > (ETHERNET_MAX_FRAME_LEN - RESPOND_ALL_COUNTERS - SET_MAX_RETURN_LEN - MEGA_END_MARK_LEN))
-                    { // bwb:超过SET返回包安全length，暂停解析,先进入发包流程
-                        complement_pkt(tx_bufs_pt[pkt_id], tx_ptr, pktlen);
-
-                        pkt_id++;
-                        pktlen = EIU_HEADER_LEN;
-                        if (pkt_id == PKG_GEN_COUNT)
-                        {
-                            for (int k = 0; k < PKG_GEN_COUNT; k++)
-                            {
-#ifdef _DUMP_PKT_SEND
-                                pkt_content_dump(tx_bufs_pt[k]);
-#endif
-                                check_pkt_end(tx_bufs_pt[k]);
-                            }
-                            nb_tx = rte_eth_tx_burst(port, t_id, tx_bufs_pt, PKG_GEN_COUNT);
-                            core_statistics[core_id].tx += nb_tx;
-                            pkt_id = 0;
-                        }
-                        tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + EIU_HEADER_LEN;
-                        pktlen += 8;
-                        tx_ptr += 8;
-                    }
-                    key_len = *(uint16_t *)(ptr + PROTOCOL_TYPE_LEN);
-                    key_hash_len = *(uint16_t *)(ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN);
-                    val_len = *(uint16_t *)(ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN);
-                    key_hash = *(uint64_t *)(ptr + PROTOCOL_HEADER_LEN + key_len);
-                    // key_hash = XXH64(ptr + PROTOCOL_HEADER_LEN, key_len, 1);
-                    // Receive preload pkt with error content
-                    if (*((uint64_t *)(ptr + PROTOCOL_HEADER_LEN)) !=
-                        *((uint64_t *)(ptr + PROTOCOL_HEADER_LEN + key_len)) - 1)
-                    {
-                        // ptr += PROTOCOL_HEADER_LEN + key_len + val_len;
-                        // rte_pktmbuf_dump(stdout, rx_buf[i], rx_buf[i]->pkt_len);
-                        // show_pkt(rx_buf[i]);
-                        // assert(false);
-                    }
-                    ret =
-                        if (ret)
-                    {
-                        fkv_set(t_id, table, store, key_hash, ptr + PROTOCOL_HEADER_LEN, key_len,
-                                ptr + PROTOCOL_HEADER_LEN + key_len + key_hash_len, val_len, VALID, false);
-                        set_succ++;
-                        *(uint16_t *)tx_ptr = SET_SUCC;
-                        tx_ptr += SET_RESPOND_LEN;
-                        pktlen += SET_RESPOND_LEN;
-                        // rte_delay_us_block(2);
-                        // rte_delay_us_sleep(1);
-                        // printf("SUCC!!!t_id:%d,set_key:%lu\n",core_id,*(uint64_t *)(ptr + PROTOCOL_HEADER_LEN));
-                    }
-                    else
-                    {
-                        set_fail++;
-                        *(uint16_t *)tx_ptr = SET_FAIL;
-                        tx_ptr += SET_RESPOND_LEN;
-                        pktlen += SET_RESPOND_LEN;
-                        // printf("FAIL!!!t_id:%d,set_key:%lu\n",core_id,*(uint64_t *)(ptr + PROTOCOL_HEADER_LEN));
-                    }
-                    ptr += PROTOCOL_HEADER_LEN + key_len + key_hash_len + val_len;
+                    parse_set();
                 }
                 else
                 {
-                    // assert(0);
                     rte_pktmbuf_dump(stdout, rx_buf[i], rx_buf[i]->pkt_len);
-                    // assert(0);
-                    // core_statistics[core_id].err_ending++;
                     break;
                 }
             }
-            /* if(set_fail)
-                printf("t_id:%ld,SET:%d\t%d\n",t_id,set_succ,set_fail); */
 
             if (pktlen != EIU_HEADER_LEN || pkt_id != 0)
             {

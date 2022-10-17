@@ -164,7 +164,7 @@ private:
     Piekv *piekv_;
 
 public:
-    RTWorker(size_t t_id);
+    RTWorker(Piekv *piekv, size_t t_id);
     ~RTWorker();
     void parse_get();
     void parse_set();
