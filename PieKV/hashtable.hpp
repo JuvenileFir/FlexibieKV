@@ -3,7 +3,7 @@
 #include <cstdlib>
 
 #include "roundhash.hpp"
-#include "mempool.hpp"
+// #include "mempool.hpp"
 #include "cuckoo.h"
 
 #define MAX_KEY_LENGTH 255

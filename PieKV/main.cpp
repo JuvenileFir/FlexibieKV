@@ -1,6 +1,15 @@
 #include "communication.hpp"
 
 
+
+struct rte_mempool *kRecv_mbuf_pool[NUM_QUEUE];
+
+typedef struct context_s {
+  unsigned int core_id;
+  unsigned int queue_id;
+} context_t;
+
+
 std::vector<std::thread> workers;
 Piekv *m_piekv;
 
@@ -18,7 +27,7 @@ void sigint_handler(int sig) {
   exit(EXIT_SUCCESS);
 }
 
-extern "C" void port_init() {
+void port_init() {
   unsigned nb_ports;
 
   /* Initialize the Environment Abstraction Layer (EAL). */
@@ -41,9 +50,9 @@ extern "C" void port_init() {
   char str[15];
   for (uint32_t i = 0; i < NUM_QUEUE; i++) {
     sprintf(str, "RX_POOL_%d", i);
-    recv_mbuf_pool[i] = rte_pktmbuf_pool_create(str, NUM_MBUFS * nb_ports, MBUF_CACHE_SIZE, 0,
+    kRecv_mbuf_pool[i] = rte_pktmbuf_pool_create(str, NUM_MBUFS * nb_ports, MBUF_CACHE_SIZE, 0,
                                                 RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
-    if (recv_mbuf_pool[i] == NULL) rte_exit(EXIT_FAILURE, "Cannot create mbuf pool\n");
+    if (kRecv_mbuf_pool[i] == NULL) rte_exit(EXIT_FAILURE, "Cannot create mbuf pool\n");
   }
   send_mbuf_pool = rte_pktmbuf_pool_create("SEND_POOL", NUM_MBUFS * nb_ports, MBUF_CACHE_SIZE, 0,
                                            RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
@@ -82,7 +91,7 @@ extern "C" void port_init() {
 
   /* Allocate and set up RX queue(s) per Ethernet port. */
   for (q = 0; q < rx_rings; q++) {
-    retval = rte_eth_rx_queue_setup(port, q, nb_rxd, rte_eth_dev_socket_id(port), NULL, recv_mbuf_pool[q]);
+    retval = rte_eth_rx_queue_setup(port, q, nb_rxd, rte_eth_dev_socket_id(port), NULL, kRecv_mbuf_pool[q]);
     if (retval < 0) rte_exit(EXIT_FAILURE, "rte_eth_rx_queue_setup:err=%d, port=%u\n", retval, (unsigned)port);
   }
 

@@ -17,7 +17,6 @@
 #define ITEM_VEC(tag, pageNumber, item_offset) \
   (((uint64_t)(tag) << 48) | ((uint64_t)(pageNumber) << 27) | (uint64_t)(item_offset))
 
-extern MemPool *kMemPool;
 
 typedef enum cuckooStatus {
   ok,

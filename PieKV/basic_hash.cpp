@@ -1,5 +1,7 @@
 #include "basic_hash.h"
 
+extern MemPool *kMemPool;
+
 uint16_t calc_tag(uint64_t key_hash) {
   // uint16_t tag = (uint16_t)(key_hash & TAG_MASK);
   uint16_t tag = (uint16_t)((key_hash >> 16) & TAG_MASK);
@@ -42,7 +44,8 @@ void write_unlock_bucket(Bucket *bucket UNUSED) {
 #endif
 }
 
-inline Cbool is_entry_expired(uint64_t index_entry) { return !index_entry; }
+// inline
+Cbool is_entry_expired(uint64_t index_entry) { return !index_entry; }
 
 Cbool key_eq(const uint8_t *key1, size_t key1_len, const uint8_t *key2, size_t key2_len) {
   return key1_len == key2_len && memcmp8(key1, key2, key1_len);

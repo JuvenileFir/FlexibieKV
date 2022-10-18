@@ -4,9 +4,9 @@
 #define LOG_HPP_
 
 #include <cstdint>
-#include "mempool.hpp"
+// #include "mempool.hpp"
 #include "hashtable.hpp"
-#include "util.h"
+// #include "util.h"
 
 #define BLOCK_MAX_NUM 16383  // a temp max num, remove it later
 #define BATCH_SIZE (2097152U)

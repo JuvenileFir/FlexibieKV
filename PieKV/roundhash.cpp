@@ -1,9 +1,9 @@
 #include <cassert>
 #include "roundhash.hpp"
 
-static uint64_t hash_param;
+uint64_t hash_param;
 
-static inline uint64_t HashValue(uint64_t val, uint64_t mod_pow) {
+inline uint64_t HashValue(uint64_t val, uint64_t mod_pow) {
   uint64_t s0 = val;
   uint64_t s1 = hash_param;
 

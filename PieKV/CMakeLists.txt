@@ -50,10 +50,10 @@ add_library(flexiblekv STATIC
 	mempool
     basic_hash
     cuckoo
-	flowing_controller
 	roundhash
 	hashtable
 	log
+	flowing_controller
 	operation
 	record
 	communication

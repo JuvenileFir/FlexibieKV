@@ -1,4 +1,4 @@
-#pragma once
+
 #ifndef COMMUNICATION_HPP_
 #define COMMUNICATION_HPP_
 
@@ -78,9 +78,12 @@ static struct rte_ether_addr D_Addr = {{0x04, 0x3f, 0x72, 0xdc, 0x26, 0x25}};
 #define IP_HDRLEN 0x05 /* default IP header length == five 32-bits words. */
 #define IP_VHL_DEF (IP_VERSION | IP_HDRLEN)
 
-struct rte_mempool *recv_mbuf_pool[NUM_QUEUE];
-struct rte_mempool *send_mbuf_pool;
+
 #define NUM_MAX_CORE 36
+const size_t page_size = 1048576 * 2;  // page size = 2 MiB
+const size_t num_pages_to_try = 240;   // SHM_MAX_PAGES;
+
+static struct rte_mempool *send_mbuf_pool;
 struct benchmark_core_statistics {
   uint64_t tx;
   uint64_t rx;
@@ -88,19 +91,10 @@ struct benchmark_core_statistics {
   uint64_t err_ending;
   int enable;
 } __rte_cache_aligned;
-struct benchmark_core_statistics core_statistics[NUM_MAX_CORE];
 
-typedef struct context_s {
-  unsigned int core_id;
-  unsigned int queue_id;
-} context_t;
+static struct benchmark_core_statistics core_statistics[NUM_MAX_CORE];
 
-size_t set_core_affinity = 1;
-
-const size_t page_size = 1048576 * 2;  // page size = 2 MiB
-const size_t num_pages_to_try = 240;   // SHM_MAX_PAGES;
-
-
+static size_t set_core_affinity = 1;
 
 
 typedef struct RxGet_Packet
