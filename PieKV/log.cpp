@@ -3,7 +3,7 @@
 
 LogSegment::LogSegment(/* args */)
 {
-    for (int i = 0; i < MAX; i++) {
+    for (int i = 0; i < BLOCK_MAX_NUM; i++) {
         // TODO: use max here for temp, create an init block function later
         log_blocks_[i] = new LogBlock;
     }

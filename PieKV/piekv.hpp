@@ -5,7 +5,10 @@
 #include "log.hpp"
 #include "basic_hash.h"
 #include "cuckoo.h"
+#include <thread>
 
+#include <vector>
+#include <csignal>
 
 class Piekv
 {
@@ -20,13 +23,9 @@ private:
 public:
     uint32_t is_running_;
     
-    Piekv(){
+    Piekv(int init_log_block_number, int init_block_size, int init_mem_block_number){
         is_running_ = 1;
         stop_entry_gc_ = 0;
-
-        int init_log_block_number = 100; //TODO: change this later
-        int init_block_size = 4096; //TODO: change this later
-        int init_mem_block_number = 200; //TODO: change this later
 
         mempool_ = MemPool(init_block_size, init_mem_block_number);
         log_ = Log(&mempool_, init_log_block_number);
