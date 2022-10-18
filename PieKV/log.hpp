@@ -40,6 +40,9 @@ typedef struct StoreStats
     size_t wasted;
 }StoreStats;
 
+struct TableStats;
+struct TableBlock;
+class MemPool;
 
 
 
