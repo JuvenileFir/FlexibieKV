@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>    // temp , remove it if you want to define your own uint32_t
 #include <cstdlib>
 
 #include "roundhash.hpp"
