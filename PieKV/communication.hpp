@@ -1,3 +1,4 @@
+#pragma once
 #ifndef COMMUNICATION_HPP_
 #define COMMUNICATION_HPP_
 

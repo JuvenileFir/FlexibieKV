@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef PIEKV_HPP_
 #define PIEKV_HPP_
 
