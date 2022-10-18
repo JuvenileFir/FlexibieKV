@@ -3,7 +3,7 @@
 
 
 #include <cstddef>
-#include <cstdint>
+#include <cstdint>     // temp , remove it if you want to define your own uint32_t
 #include <cstring>
 
 #include <sys/mman.h>    // TODO: find an alternative later
