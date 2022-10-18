@@ -13,25 +13,6 @@
 #define THREAD_NUM 4
 
 
-typedef struct LogItem {
-    uint64_t item_size;
-    uint32_t expire_time;
-    uint32_t kv_length_vec;
-    /* key_length: 8, value_length: 24; kv_length_vec == 0: empty item */
-
-    #define ITEMKEY_MASK (((uint32_t)1 << 8) - 1)
-    #define ITEMKEY_LENGTH(kv_length_vec) ((kv_length_vec) >> 24)
-
-    #define ITEMVALUE_MASK (((uint32_t)1 << 24) - 1)
-    #define ITEMVALUE_LENGTH(kv_length_vec) ((kv_length_vec)&ITEMVALUE_MASK)
-
-    #define ITEMKV_LENGTH_VEC(key_length, value_length) (((uint32_t)(key_length) << 24) | (uint32_t)(value_length))
-
-    /* the rest is meaningful only when kv_length_vec != 0 */
-    uint64_t key_hash;
-    uint8_t data[0];
-}LogItem ALIGNED(64);
-
 
 
 typedef struct StoreStats

@@ -162,8 +162,11 @@ int64_t HashTable::set_table(tablePosition *tp, twoBucket *tb, uint64_t key_hash
       break;
   }
 
-  twoBucket tb = cal_two_buckets(key_hash);
-  tablePosition tp = cuckoo_insert(bucket, key_hash, tag, *tb, key, key_length);
+  twoBucket tbs = cal_two_buckets(key_hash);
+  tablePosition tps = cuckoo_insert(bucket, key_hash, tag, *tb, key, key_length);
+
+  tb = &tbs;
+  tp = &tps;
 
   // memory_barrier();
   assert((*(volatile uint8_t *)&bucket->lock) > 1);

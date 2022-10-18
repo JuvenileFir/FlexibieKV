@@ -32,21 +32,6 @@ uint32_t read_version_end(const Bucket *bucket UNUSED) {
 #endif
 }
 
-void write_lock_bucket(Bucket *bucket UNUSED) {
-#ifdef TABLE_CONCURRENT
-  // if (table->concurrent_access_mode == 1) {
-  //   assert((*(volatile uint32_t *)&bucket->version & 1U) == 0U);
-  //   (*(volatile uint32_t *)&bucket->version)++;
-  //   memory_barrier();
-  // } else if (table->concurrent_access_mode == 2) {
-  while (1) {
-    uint32_t v = *(volatile uint32_t *)&bucket->version & ~1U;
-    uint32_t new_v = v | 1U;
-    if (__sync_bool_compare_and_swap((volatile uint32_t *)&bucket->version, v, new_v)) break;
-  }
-  // }
-#endif
-}
 
 void write_unlock_bucket(Bucket *bucket UNUSED) {
 #ifdef TABLE_CONCURRENT
@@ -69,8 +54,7 @@ uint16_t try_read_from_bucket(const Bucket *bucket, const uint16_t tag, const ui
     if (TAG(bucket->item_vec[slot]) != tag) continue;
 
     // we may read garbage values, which do not cause any fatal issue
-    log_item *item = (log_item *)log_item_locate(PAGE(bucket->item_vec[slot]), ITEM_OFFSET(bucket->item_vec[slot]));
-
+    LogItem *item = (LogItem *)kMemPool->locate_item(PAGE(bucket->item_vec[slot]), ITEM_OFFSET(bucket->item_vec[slot]));
     // a key comparison reads up to min(source key length and destination key length), which is always safe to do
     if (!key_eq(item->data, ITEMKEY_LENGTH(item->kv_length_vec), key, keylength)) continue;
 
@@ -104,7 +88,7 @@ Cbool try_find_insert_bucket(const Bucket *bucket_, uint32_t *slot, const uint16
       *slot = i;
     } else {
       if (TAG(bucket_->item_vec[i]) != tag) continue;
-      log_item *item = (log_item *)log_item_locate(PAGE(bucket_->item_vec[i]), ITEM_OFFSET(bucket_->item_vec[i]));
+      LogItem *item = (LogItem *)kMemPool->locate_item(PAGE(bucket_->item_vec[i]), ITEM_OFFSET(bucket_->item_vec[i]));
       if (key_eq(item->data, ITEMKEY_LENGTH(item->kv_length_vec), key, keylength)) {
         *slot = i;
         return false;

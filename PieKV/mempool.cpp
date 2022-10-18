@@ -1,6 +1,16 @@
 #include "mempool.hpp"
 
 
+static int mem_blocks_compare_vaddr(const void *a, const void *b) {
+  const struct MemBlock *pa = (const struct MemBlock *)a;
+  const struct MemBlock *pb = (const struct MemBlock *)b;
+  if (pa->ptr < pb->ptr)
+    return -1;
+  else
+    return 1;
+}
+
+
 MemPool::MemPool(size_t block_size, size_t block_num_to_init)
 {
     // TODO: add lock here and add a lock to the entire mempool later
@@ -26,16 +36,6 @@ MemPool::MemPool(size_t block_size, size_t block_num_to_init)
 MemPool::~MemPool()
 {
 
-}
-
-
-static int mem_blocks_compare_vaddr(const void *a, const void *b) {
-  const struct MemBlock *pa = (const struct MemBlock *)a;
-  const struct MemBlock *pb = (const struct MemBlock *)b;
-  if (pa->ptr < pb->ptr)
-    return -1;
-  else
-    return 1;
 }
 
 /*  

@@ -47,17 +47,16 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0")
 set(CMAKE_C_FLAGS_DEBUG "-O0")
 
 add_library(flexiblekv STATIC
+	mempool
     basic_hash
-	communication
     cuckoo
 	flowing_controller
+	roundhash
 	hashtable
 	log
-	mempool
 	operation
 	record
-	roundhash
-
+	communication
 )
 
 SET(DPDK_LIBS

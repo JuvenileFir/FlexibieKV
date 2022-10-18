@@ -74,11 +74,7 @@ size_t RoundHash::ArcToBucket(size_t arc_num){
   }
   uint64_t s_to_use = current_s_ + (num_short_arcs_ > arc_num);
   arc_num -= num_short_arc_groups_ & -(num_short_arcs_ <= arc_num);
-#ifdef HARDCODE_DIVISION
-  size_t arc_group = divf[s_to_use](arc_num);
-#else
   size_t arc_group = arc_num / s_to_use;
-#endif
   size_t position_in_group = arc_num - arc_group * s_to_use;
   size_t initial_groups_ = arc_groups_;
   if (s_to_use > S_) {

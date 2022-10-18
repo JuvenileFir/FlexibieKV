@@ -13,7 +13,7 @@
 #include <csignal>
 
 
-MemPool *kMemPool;
+extern MemPool *kMemPool;
 
 class Piekv
 {

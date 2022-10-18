@@ -183,7 +183,7 @@ int64_t LogSegment::set_log(uint64_t key_hash, const uint8_t *key, uint32_t key_
     table_stats_->set_success += 1;
 
     #ifdef STORE_COLLECT_STATS
-    STORE_STAT_ADD(store, actual_used_mem, new_item_size);
+        store_stats_->actual_used_mem += new_item_size;
     #endif
 
     new_item->item_size = new_item_size;
@@ -228,8 +228,13 @@ int64_t LogSegment::AllocItem(uint64_t item_size) {
                 return -1;
             }
         }
-        else {
-            // TODO: implement a function `big_set`
-            return -2;  // batch_too_small
-        }
+        item_offset = offset_;
+        offset_ += item_size;
+        log_blocks_[usingblock_]->residue -= item_size;
+        return item_offset;
+    }
+    else {
+        // TODO: implement a function `big_set`
+        return -2;  // batch_too_small
+    }
 }

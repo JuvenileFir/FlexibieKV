@@ -76,6 +76,9 @@ typedef struct bQueue {
   uint32_t last_;
 } bQueue;
 
+struct Bucket;
+struct tablePosition;
+
 struct twoBucket cal_two_buckets(uint64_t keyhash);
 
 uint32_t alt_bucket(uint32_t b1, uint16_t tag);
