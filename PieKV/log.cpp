@@ -188,7 +188,7 @@ int64_t LogSegment::set_log(uint64_t key_hash, const uint8_t *key, uint32_t key_
 
     new_item->item_size = new_item_size;
     set_item(new_item, key_hash, key, (uint32_t)key_length, value, (uint32_t)value_length, expire_time);
-
+    return block_id;
 }
 
 

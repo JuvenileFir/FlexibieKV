@@ -7,9 +7,10 @@ HashTable::HashTable(MemPool* mempool) {
 	is_setting_ = 0;
 	is_flexibling_ = 0;
 	current_version_ = 0;
+  mempool_ = mempool;
 	table_block_num_ = mempool->get_block_available_num();
 	assert(table_block_num_);
-	round_hash_ = RoundHash(table_block_num_, 8);
+	round_hash_ = new RoundHash(table_block_num_, 8);
 
 	for (uint32_t i = 0; i < table_block_num_; i++) {
 		int32_t alloc_id = mempool->alloc_block();
@@ -46,11 +47,11 @@ void HashTable::RemoveBlock() {
 
 void HashTable::ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_move) {
 	size_t count;
-	size_t parts[round_hash_.S_ << 1];
+	size_t parts[round_hash_->S_ << 1];
 	/* once in a cycle*/
   for (int i = 0; i < blocknum_to_move; i++) {
-		round_hash_.get_parts_to_remove(parts, &count);// get all parts to move
-		round_hash_.DelBucket();
+		round_hash_->get_parts_to_remove(parts, &count);// get all parts to move
+		round_hash_->DelBucket();
 
 		while (1) {
 			if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_setting_), 0U, 1U))
@@ -60,7 +61,7 @@ void HashTable::ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 		__sync_fetch_and_sub((volatile uint32_t *)&(is_setting_), 1U);
 
 		this->redistribute_last_short_group(parts, count);
-    memset(parts, 0, sizeof(size_t) * (round_hash_.S_ << 1));
+    memset(parts, 0, sizeof(size_t) * (round_hash_->S_ << 1));
     tableblocksToMove[i]->block_id = table_blocks_[table_block_num_]->block_id;
     tableblocksToMove[i]->block_ptr = table_blocks_[table_block_num_]->block_ptr;
     table_block_num_ -= 1;
@@ -76,12 +77,12 @@ void HashTable::ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 
 void HashTable::ExpandTable(TableBlock **tableblocksToMove, size_t blocknum_to_move) {
 	size_t count;
-	size_t parts[round_hash_.S_ << 1];
+	size_t parts[round_hash_->S_ << 1];
 	/* once in a cycle*/
   for (int i = 0; i < blocknum_to_move; i++) {
-    AddBlock(tableblocksToMove[i]->block_ptr,tableblocksToMove[i]->block_id);
-		round_hash_.get_parts_to_add(parts, &count);// get all parts to move
-		round_hash_.NewBucket();
+    AddBlock((uint8_t *)tableblocksToMove[i]->block_ptr,tableblocksToMove[i]->block_id);
+		round_hash_->get_parts_to_add(parts, &count);// get all parts to move
+		round_hash_->NewBucket();
 
 		while (1) {
 			if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_setting_), 0U, 1U))
@@ -91,7 +92,7 @@ void HashTable::ExpandTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 		__sync_fetch_and_sub((volatile uint32_t *)&(is_setting_), 1U);
 
 		this->redistribute_first_long_group(parts, count);
-    memset(parts, 0, sizeof(size_t) * (round_hash_.S_ << 1));
+    memset(parts, 0, sizeof(size_t) * (round_hash_->S_ << 1));
 		table_block_num_++;
 
 		while (1) {
@@ -116,7 +117,7 @@ int64_t HashTable::get_table(twoSnapshot *ts1, twoBucket *tb, Bucket *bucket, ui
   if (tp.cuckoostatus == failure_key_not_found) {
     if (snapshot_is_flexibling) {
       snapshot_is_flexibling = (Cbool)0;
-      uint32_t block_index = round_hash_.HashToBucket(key_hash);
+      uint32_t block_index = round_hash_->HashToBucket(key_hash);
       Bucket *bucket = (Bucket *)this->get_block_ptr(block_index);
       return -2;
     }
@@ -140,7 +141,7 @@ int64_t HashTable::get_table(twoSnapshot *ts1, twoBucket *tb, Bucket *bucket, ui
   return located_bucket->item_vec[tp.slot];
 }
 
-int64_t HashTable::set_table(uint64_t key_hash, const uint8_t *key, size_t key_length){
+int64_t HashTable::set_table(tablePosition *tp, twoBucket *tb, uint64_t key_hash, const uint8_t *key, size_t key_length){
   /*
    * XXX: Temporarily, the first bucket's `unused1` of a partiton is used for
    * lock this partition. When we execute a `set` that needs to displace
@@ -151,7 +152,7 @@ int64_t HashTable::set_table(uint64_t key_hash, const uint8_t *key, size_t key_l
    * policy is the simplest way.
    */
   uint16_t tag = calc_tag(key_hash);
-  uint32_t block_index = round_hash_.HashToBucket(key_hash);
+  uint32_t block_index = round_hash_->HashToBucket(key_hash);
   Bucket *bucket = (Bucket *)this->get_block_ptr(block_index);
 
   while (1) {
@@ -162,13 +163,13 @@ int64_t HashTable::set_table(uint64_t key_hash, const uint8_t *key, size_t key_l
   }
 
   twoBucket tb = cal_two_buckets(key_hash);
-  tablePosition tp = cuckoo_insert(bucket, key_hash, tag, tb, key, key_length);
+  tablePosition tp = cuckoo_insert(bucket, key_hash, tag, *tb, key, key_length);
 
   // memory_barrier();
   assert((*(volatile uint8_t *)&bucket->lock) > 1);
   __sync_fetch_and_sub((volatile uint8_t *)&bucket->lock, (uint8_t)2);
 
-  if (tp.cuckoostatus == failure_table_full) {
+  if (tp->cuckoostatus == failure_table_full) {
     // TODO: support eviction
 #ifdef EXP_LATENCY
     auto end = std::chrono::steady_clock::now();
@@ -182,10 +183,10 @@ int64_t HashTable::set_table(uint64_t key_hash, const uint8_t *key, size_t key_l
 #endif
     return -1;//TABLE_STAT_INC(store, set_fail);
   }
-  if (tp.cuckoostatus == failure_key_duplicated) {
+  if (tp->cuckoostatus == failure_key_duplicated) {
     // TODO: support overwrite
     // overwriting = true;
-    unlock_two_buckets(bucket, tb);
+    unlock_two_buckets(bucket, *tb);
 #ifdef EXP_LATENCY
     auto end = std::chrono::steady_clock::now();
 #ifdef TRANSITION_ONLY
@@ -198,8 +199,8 @@ int64_t HashTable::set_table(uint64_t key_hash, const uint8_t *key, size_t key_l
 #endif
     return -2;//TABLE_STAT_INC(store, set_fail);
   }
-  assert(tp.cuckoostatus == ok); 
-  return (uint64_t)&bucket[tp.bucket];
+  assert(tp->cuckoostatus == ok); 
+  return (uint64_t)&bucket[tp->bucket];
  
 }
 
@@ -229,10 +230,10 @@ void HashTable::redistribute_last_short_group(size_t *parts, size_t count) {
       write_lock_bucket(&bucket[bucket_index]);//此bucket指block
       for (entry_index = 0; entry_index < ITEMS_PER_BUCKET; entry_index++) {//block里面的bucket
         if (!is_entry_expired(bucket[bucket_index].item_vec[entry_index])) {
-          item = log_item_locate(PAGE(bucket[bucket_index].item_vec[entry_index]),
+          item = mempool_->locate_item(PAGE(bucket[bucket_index].item_vec[entry_index]),
                                  ITEM_OFFSET(bucket[bucket_index].item_vec[entry_index]));
-
-          if ((target_p = calc_bucket_index(item->key_hash, (Cbool)1 ^ table->current_version)) != parts[k]) {
+          target_p = round_hash_->HashToBucket(item->key_hash);
+          if (target_p != parts[k])  {
             workp = (Bucket *)get_block_ptr(target_p);
             tb = cal_two_buckets(item->key_hash);
             tablePosition tp = cuckoo_insert(workp, item->key_hash, TAG(bucket[bucket_index].item_vec[entry_index]),
@@ -299,10 +300,10 @@ void HashTable::redistribute_first_long_group(size_t *parts, size_t count) {
       write_lock_bucket(&bucket[bucket_index]);
       for (entry_index = 0; entry_index < ITEMS_PER_BUCKET; entry_index++) {
         if (!is_entry_expired(bucket[bucket_index].item_vec[entry_index])) {
-          item = log_item_locate(PAGE(bucket[bucket_index].item_vec[entry_index]),
+          item = mempool_->locate_item(PAGE(bucket[bucket_index].item_vec[entry_index]),
                                  ITEM_OFFSET(bucket[bucket_index].item_vec[entry_index]));
-
-          if ((target_p = calc_bucket_index(item->key_hash, (Cbool)1 ^ table->current_version)) != parts[k]) {
+          target_p = round_hash_->HashToBucket(item->key_hash);
+          if (target_p != parts[k]) {
             workp = (struct Bucket *)get_block_ptr(target_p);
             tb = cal_two_buckets(item->key_hash);
             tablePosition tp = cuckoo_insert(workp, item->key_hash, TAG(bucket[bucket_index].item_vec[entry_index]),

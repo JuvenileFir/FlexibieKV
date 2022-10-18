@@ -51,11 +51,12 @@ private:
 public:
     TableBlock *table_blocks_[MAX_BLOCK_NUM - 1];//
     TableStats table_stats_;
-    RoundHash round_hash_;
+    RoundHash *round_hash_;
     uint32_t table_block_num_;//combine "hash_table.num_partitions" & "PartitionMap.numOfpartitions"
     uint32_t is_setting_;
     uint32_t is_flexibling_;
     uint32_t current_version_;
+    MemPool *mempool_;
     
     HashTable(MemPool* mempool);
     ~HashTable();
@@ -66,7 +67,7 @@ public:
     void ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_move);//H2L中的hashtable部分
     void ExpandTable(TableBlock **tableblocksToMove, size_t blocknum_to_move);//L2H中的hashtable部分
     int64_t get_table(twoSnapshot *ts1, twoBucket *tb,  Bucket * bucket, uint64_t key_hash, const uint8_t *key, size_t key_length);
-    int64_t set_table(uint64_t key_hash, const uint8_t *key, size_t key_length);
+    int64_t set_table(tablePosition *tp, twoBucket *tb, uint64_t key_hash, const uint8_t *key, size_t key_length);
 
     void redistribute_last_short_group(size_t *parts, size_t count);
     void redistribute_first_long_group(size_t *parts, size_t count);

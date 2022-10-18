@@ -11,7 +11,7 @@ uint16_t calc_tag(uint64_t key_hash) {
     return tag;
 }
 
-uint32_t read_version_begin(const page_bucket *bucket UNUSED) {
+uint32_t read_version_begin(const Bucket *bucket UNUSED) {
 #ifdef TABLE_CONCURRENT
   while (true) {
     uint32_t v = *(volatile uint32_t *)&bucket->version;
@@ -24,7 +24,7 @@ uint32_t read_version_begin(const page_bucket *bucket UNUSED) {
 #endif
 }
 
-uint32_t read_version_end(const page_bucket *bucket UNUSED) {
+uint32_t read_version_end(const Bucket *bucket UNUSED) {
 #ifdef TABLE_CONCURRENT
   memory_barrier();
   uint32_t v = *(volatile uint32_t *)&bucket->version;
@@ -34,7 +34,7 @@ uint32_t read_version_end(const page_bucket *bucket UNUSED) {
 #endif
 }
 
-void write_lock_bucket(page_bucket *bucket UNUSED) {
+void write_lock_bucket(Bucket *bucket UNUSED) {
 #ifdef TABLE_CONCURRENT
   // if (table->concurrent_access_mode == 1) {
   //   assert((*(volatile uint32_t *)&bucket->version & 1U) == 0U);
@@ -50,7 +50,7 @@ void write_lock_bucket(page_bucket *bucket UNUSED) {
 #endif
 }
 
-void write_unlock_bucket(page_bucket *bucket UNUSED) {
+void write_unlock_bucket(Bucket *bucket UNUSED) {
 #ifdef TABLE_CONCURRENT
   memory_barrier();
   assert((*(volatile uint32_t *)&bucket->version & 1U) == 1U);
@@ -65,7 +65,7 @@ Cbool key_eq(const uint8_t *key1, size_t key1_len, const uint8_t *key2, size_t k
   return key1_len == key2_len && memcmp8(key1, key2, key1_len);
 }
 
-uint16_t try_read_from_bucket(const page_bucket *bucket, const uint16_t tag, const uint8_t *key, uint32_t keylength) {
+uint16_t try_read_from_bucket(const Bucket *bucket, const uint16_t tag, const uint8_t *key, uint32_t keylength) {
   uint32_t slot;
   for (slot = 0; slot < ITEMS_PER_BUCKET; slot++) {
     if (TAG(bucket->item_vec[slot]) != tag) continue;
@@ -81,7 +81,7 @@ uint16_t try_read_from_bucket(const page_bucket *bucket, const uint16_t tag, con
   return ITEMS_PER_BUCKET;
 }
 
-uint16_t try_find_slot(const page_bucket *bucket, const uint16_t tag, const uint64_t offset) {
+uint16_t try_find_slot(const Bucket *bucket, const uint16_t tag, const uint64_t offset) {
   uint32_t slot;
   for (slot = 0; slot < ITEMS_PER_BUCKET; slot++) {
     if (ITEM_OFFSET(bucket->item_vec[slot]) != offset || TAG(bucket->item_vec[slot]) != tag) continue;
@@ -97,7 +97,7 @@ uint16_t try_find_slot(const page_bucket *bucket, const uint16_t tag, const uint
  * in `slot` and return true. If no duplicate key is found and no empty slot
  * is found, we store `ITEMS_PER_BUCKET` in `slot` and return true.
  */
-Cbool try_find_insert_bucket(const page_bucket *bucket_, uint32_t *slot, const uint16_t tag, const uint8_t *key,
+Cbool try_find_insert_bucket(const Bucket *bucket_, uint32_t *slot, const uint16_t tag, const uint8_t *key,
                              uint32_t keylength) {
   uint32_t i;
   *slot = ITEMS_PER_BUCKET;
