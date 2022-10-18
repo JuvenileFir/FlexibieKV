@@ -6,7 +6,7 @@
 #include "hashtable.hpp"
 #include "util.h"
 
-#define MAX 100  // a temp max num, remove it later
+#define BLOCK_MAX_NUM 16383  // a temp max num, remove it later
 #define BATCH_SIZE (2097152U)
 #define THREAD_NUM 4
 
@@ -56,7 +56,7 @@ class LogSegment
 private:
     /* data */
 public:
-    LogBlock *log_blocks_[MAX];   // TODO: use SHM_MAX_PAGES - 1 here later
+    LogBlock *log_blocks_[BLOCK_MAX_NUM];   // TODO: use SHM_MAX_PAGES - 1 here later
     StoreStats *store_stats_;
     TableStats *table_stats_;
     uint32_t blocknum_;
