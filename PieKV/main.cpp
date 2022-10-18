@@ -1,5 +1,5 @@
 #include "piekv.hpp"
-
+#include "communication.hpp"
 void sigint_handler(int sig) {
   
   __sync_bool_compare_and_swap((volatile Cbool *)&piekv_.is_running, 1U, 0U);
@@ -50,6 +50,11 @@ int main(){
     }
   }
   std::signal(SIGINT, sigint_handler);
+
+
+  Piekv piekv;
+
+  RTworker
 
   shm_init(page_size, num_pages_to_try);
 

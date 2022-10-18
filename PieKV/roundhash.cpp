@@ -1,13 +1,27 @@
+#include <cassert>
 #include "roundhash.hpp"
 
-RoundHash::RoundHash(uint32_t num){
+static uint64_t hash_param;
+
+static inline uint64_t HashValue(uint64_t val, uint64_t mod_pow) {
+  uint64_t s0 = val;
+  uint64_t s1 = hash_param;
+
+  s1 ^= s0;
+  s0 = rotl(s0, 55) ^ s1 ^ (s1 << 14);  // a, b
+  s1 = rotl(s1, 36);                    // c
+  uint64_t hash1 = s0 + s1;
+  hash1 = hash1 & ((1ULL << mod_pow) - 1);
+  return hash1;
+}
+
+RoundHash::RoundHash(uint32_t num, uint64_t S){
 	S_ = S;
 	num_long_arcs_ = 1;
 	num_short_arc_groups_ = 0;
 	num_short_arcs_ = 0;
 	current_s_ = S_;
 	arc_groups_ = 1;
-	S_minus_one_ = S_ - 1;
 	S_log_ = 0;
 
 	while ((1UL << S_log_) < S_) 
@@ -42,7 +56,7 @@ size_t RoundHash::ArcNum(uint64_t divs, uint64_t hash){
   return new_num;
 }
 
-static size_t RoundHash::HashToArc(uint64_t hash){
+size_t RoundHash::HashToArc(uint64_t hash){
 	if (get_block_num() < S_) {
     return ArcNum(get_block_num(), hash);
   }
@@ -54,7 +68,7 @@ static size_t RoundHash::HashToArc(uint64_t hash){
   return arc_candidate;
 }
 
-static size_t RoundHash::ArcToBucket(size_t arc_num){
+size_t RoundHash::ArcToBucket(size_t arc_num){
   if (arc_num < S_) {
     return arc_num;
   }
@@ -71,10 +85,10 @@ static size_t RoundHash::ArcToBucket(size_t arc_num){
     initial_groups_ <<= 1;
     arc_group <<= 1;
     arc_group += (position_in_group >> S_log_);
-    position_in_group &= S_minus_one_;
+    position_in_group &= S_ - 1;
   }
   size_t dist = __builtin_ctzll(arc_group);//返回从最低位开始0的个数
-  size_t new_ret = ((S_ + position_in_group) * initial_groups_ + arc_group) 
+  size_t new_ret = ((S_ + position_in_group) * initial_groups_ + arc_group); 
   new_ret = new_ret >> (dist + 1);
   return new_ret;
 }

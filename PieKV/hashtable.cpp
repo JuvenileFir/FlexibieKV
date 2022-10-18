@@ -9,7 +9,7 @@ HashTable::HashTable(MemPool* mempool) {
 	current_version_ = 0;
 	table_block_num_ = mempool->get_block_available_num();
 	assert(table_block_num_);
-	round_hash_ = RoundHash(table_block_num_);
+	round_hash_ = RoundHash(table_block_num_, 8);
 
 	for (uint32_t i = 0; i < table_block_num_; i++) {
 		int32_t alloc_id = mempool->alloc_block();
@@ -180,8 +180,7 @@ int64_t HashTable::set_table(uint64_t key_hash, const uint8_t *key, size_t key_l
     printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
 #endif
 #endif
-    TABLE_STAT_INC(store, set_fail);
-    return -1;
+    return -1;//TABLE_STAT_INC(store, set_fail);
   }
   if (tp.cuckoostatus == failure_key_duplicated) {
     // TODO: support overwrite
@@ -197,11 +196,10 @@ int64_t HashTable::set_table(uint64_t key_hash, const uint8_t *key, size_t key_l
     printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
 #endif
 #endif
-    TABLE_STAT_INC(store, set_fail);
-    return -2;
+    return -2;//TABLE_STAT_INC(store, set_fail);
   }
   assert(tp.cuckoostatus == ok); 
-  return &bucket[tp.bucket];
+  return (uint64_t)&bucket[tp.bucket];
  
 }
 
