@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include "mempool.hpp"
+#include "util.h"
 
 #define TAG_MASK (((uint64_t)1 << 15) - 1)
 #define TAG(item_vec) ((item_vec) >> 48)
@@ -16,7 +17,7 @@
 #define ITEM_VEC(tag, pageNumber, item_offset) \
   (((uint64_t)(tag) << 48) | ((uint64_t)(pageNumber) << 27) | (uint64_t)(item_offset))
 
-EXTERN_BEGIN
+extern MemPool *kMemPool;
 
 typedef enum cuckooStatus {
   ok,
@@ -72,7 +73,7 @@ typedef struct Bucket
     uint8_t lock;
     uint16_t padding;
     uint64_t item_vec[7];
-} Bucket ALIGNED(64);   
+} Bucket;     //  ALIGNED(64)
 
 uint16_t calc_tag(uint64_t key_hash);
 
@@ -101,4 +102,4 @@ uint16_t try_find_slot(const Bucket *bucket, const uint16_t tag, const uint64_t 
 Cbool try_find_insert_bucket(const Bucket *bucket_, uint32_t *slot, const uint16_t tag, const uint8_t *key,
                              uint32_t keylength);
 
-EXTERN_END
+

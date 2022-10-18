@@ -1,7 +1,5 @@
 #include "basic_hash.h"
 
-EXTERN_BEGIN
-
 uint16_t calc_tag(uint64_t key_hash) {
   // uint16_t tag = (uint16_t)(key_hash & TAG_MASK);
   uint16_t tag = (uint16_t)((key_hash >> 16) & TAG_MASK);
@@ -116,4 +114,3 @@ Cbool try_find_insert_bucket(const Bucket *bucket_, uint32_t *slot, const uint16
   return true;
 }
 
-EXTERN_END

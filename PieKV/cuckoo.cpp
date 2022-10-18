@@ -1,7 +1,6 @@
 #include <assert.h>
 #include "cuckoo.h"
 
-EXTERN_BEGIN
 
 static const uint8_t MAX_BFS_PATH_LEN = 5;
 // static const uint16_t const_pow_slot_per_bucket_MAX_BFS_PATH_LEN =
@@ -413,4 +412,3 @@ Cbool cuckoopath_move(Bucket *partition, cuckooRecord *cuckoopath, int depth, tw
   return true;
 }
 
-EXTERN_END

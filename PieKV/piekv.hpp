@@ -12,14 +12,16 @@
 #include <vector>
 #include <csignal>
 
+
+MemPool *kMemPool;
+
 class Piekv
 {
 private:
     HashTable *hashtable_;
     Log *log_;
-    MemPool *mempool_;
     uint32_t stop_entry_gc_;//used for stopping index entry gc when `move_h2t`???
-
+    MemPool *mempool_;
 
 
 public:
@@ -29,7 +31,8 @@ public:
         is_running_ = 1;
         stop_entry_gc_ = 0;
 
-        mempool_ = new MemPool(init_block_size, init_mem_block_number);
+        kMemPool = new MemPool(init_block_size, init_mem_block_number);
+        mempool_ = kMemPool;
         log_ = new Log(mempool_, init_log_block_number);
         hashtable_ = new HashTable(mempool_);
     }
