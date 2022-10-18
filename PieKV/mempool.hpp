@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef MEMPOOL_HPP_
 #define MEMPOOL_HPP_
 

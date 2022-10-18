@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef RECORD_HPP_
 #define RECORD_HPP_
 
