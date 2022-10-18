@@ -114,7 +114,7 @@ add_definitions(-DASSUME_HASHED)
 
 
 ADD_EXECUTABLE(main main.cpp)
-# TARGET_LINK_LIBRARIES(mem_flowing flexiblekv)
+TARGET_LINK_LIBRARIES(main flexiblekv)
 TARGET_LINK_LIBRARIES(main ${ALL_LIBS})
 # TARGET_LINK_LIBRARIES(mem_flowing libxxhash.so)
 
