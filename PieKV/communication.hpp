@@ -80,10 +80,10 @@ static struct rte_ether_addr D_Addr = {{0x04, 0x3f, 0x72, 0xdc, 0x26, 0x25}};
 
 
 #define NUM_MAX_CORE 36
-const size_t page_size = 1048576 * 2;  // page size = 2 MiB
-const size_t num_pages_to_try = 240;   // SHM_MAX_PAGES;
+// const size_t page_size = 1048576 * 2;  // page size = 2 MiB
+const size_t kblock_size = 2097152UL;
+const size_t num_mem_blocks = 240;   // SHM_MAX_PAGES;
 
-static struct rte_mempool *send_mbuf_pool;
 struct benchmark_core_statistics {
   uint64_t tx;
   uint64_t rx;
@@ -159,7 +159,7 @@ private:
     Piekv *piekv_;
 
 public:
-    RTWorker(Piekv *piekv, size_t t_id);
+    RTWorker(Piekv *piekv, size_t t_id, struct rte_mempool *send_mbuf_pool);
     ~RTWorker();
     void parse_get();
     void parse_set();

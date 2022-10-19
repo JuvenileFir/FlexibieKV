@@ -2,7 +2,7 @@
 
 
 
-RTWorker::RTWorker(Piekv *piekv, size_t t_id)
+RTWorker::RTWorker(Piekv *piekv, size_t t_id, struct rte_mempool *send_mbuf_pool)
 {
     piekv_ = piekv;
     core_id = t_id;
@@ -14,9 +14,8 @@ RTWorker::RTWorker(Piekv *piekv, size_t t_id)
         if (pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask) < 0)
             fprintf(stderr, "[Error] set thread affinity failed\n");
     }
+
     core_statistics[core_id].enable = 1;
-
-
 
     pkt = (struct rte_mbuf *)rte_pktmbuf_alloc((struct rte_mempool *)send_mbuf_pool);
     if (pkt == NULL)

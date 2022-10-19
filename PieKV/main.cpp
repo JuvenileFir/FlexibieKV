@@ -1,8 +1,8 @@
 #include "communication.hpp"
 
 
-
 struct rte_mempool *kRecv_mbuf_pool[NUM_QUEUE];
+struct rte_mempool *send_mbuf_pool;
 
 typedef struct context_s {
   unsigned int core_id;
@@ -40,7 +40,9 @@ void port_init() {
                     (char *)"--huge-unlink",
                     (char *)"-w",
                     (char *)"pci@0000:03:00.1"};
+  
   int ret = rte_eal_init(t_argc, t_argv);
+
   if (ret < 0) rte_exit(EXIT_FAILURE, "Error with EAL initialization\n");
 
   nb_ports = rte_eth_dev_count_avail();
@@ -83,6 +85,7 @@ void port_init() {
   tx_conf = dev_info.default_txconf;
   tx_conf.offloads = port_conf.txmode.offloads;
 
+  
   /* Configure the Ethernet device. */
   retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf);
   if (retval < 0) rte_exit(EXIT_FAILURE, "Cannot configure device: err=%d, port=%u\n", retval, (unsigned)port);
@@ -143,13 +146,10 @@ int main(int argc, char *argv[]){
             break;
         }
     }
-
+    std::signal(SIGINT, sigint_handler);
 
     port_init();
-
-    m_piekv = new Piekv(100, 4096, 100);
-
-    std::signal(SIGINT, sigint_handler);
+    m_piekv = new Piekv(pages, kblock_size, num_mem_blocks);
 
     // show_system_status(&mytable);
     RTWorker *m_rtworkers[4];
@@ -157,7 +157,9 @@ int main(int argc, char *argv[]){
     printf(" == [STAT] Workers Start (%d threads in total) == \n", THREAD_NUM);
     size_t id;
     for (id = 0; id < THREAD_NUM; id++) {
-            m_rtworkers[id] = new RTWorker(m_piekv, id);
+
+            m_rtworkers[id] = new RTWorker(m_piekv, id, send_mbuf_pool);
+
             workers.push_back(std::thread(&RTWorker::worker_proc,m_rtworkers[id]));
     }
 

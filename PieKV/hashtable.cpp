@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstdint> 
+#include <cstdio>
 #include "hashtable.hpp"
 #include "basic_hash.h"
 
@@ -9,9 +10,14 @@ HashTable::HashTable(MemPool* mempool) {
 	current_version_ = 0;
   mempool_ = mempool;
 	table_block_num_ = mempool->get_block_available_num();
+
 	assert(table_block_num_);
 	round_hash_ = new RoundHash(table_block_num_, 8);
 
+  for (int i = 0; i < MAX_BLOCK_NUM; i++) {
+        // TODO: use max here for temp, create an init block function later
+        table_blocks_[i] = new TableBlock;
+    }
 	for (uint32_t i = 0; i < table_block_num_; i++) {
 		int32_t alloc_id = mempool->alloc_block();
 		assert(alloc_id + 1); 
