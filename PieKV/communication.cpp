@@ -83,7 +83,7 @@ void RTWorker::parse_set(){
     RxSet_Packet *rxset_packet = (RxSet_Packet *)ptr;
     uint64_t key_hash = *(uint64_t *)(ptr + sizeof(RxSet_Packet)+ rxset_packet->key_len);
     
-
+    printf("[INFO] set\n");
     bool ret = piekv_->set(t_id, key_hash, 
                       ptr + sizeof(RxSet_Packet), rxset_packet->key_len,
                       ptr + sizeof(RxSet_Packet) + rxset_packet->key_len + rxset_packet->key_hash_len,
@@ -120,6 +120,7 @@ void RTWorker::parse_get()
     uint64_t key_hash = *(uint64_t *)(ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN + rxget_packet->key_len);
     uint8_t *key = ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN + PROTOCOL_KEYHASHLEN_LEN; 
 
+
     // perform get operation, ret represents success or not
     bool ret = piekv_->get(t_id, 
                     key_hash, 
@@ -128,7 +129,7 @@ void RTWorker::parse_get()
                     tx_ptr + PROTOCOL_HEADER_LEN + rxget_packet->key_len,
                     (uint32_t *)(tx_ptr + PROTOCOL_TYPE_LEN + PROTOCOL_KEYLEN_LEN)
                 );
-    
+
     if (ret)
     {
         rt_counter_.get_succ += 1;
@@ -268,11 +269,15 @@ void RTWorker::worker_proc()
 
                 if (*(uint16_t *)ptr == MEGA_JOB_GET)
                 {
+                    printf("[INFO]parse get\n");
                     parse_get();
+                    printf("[INFO]get finished!\n");
                 }
                 else if (*(uint16_t *)ptr == MEGA_JOB_SET)
                 {
+                    printf("[INFO]parse set\n");
                     parse_set();
+                    printf("[INFO]set finished!\n");
                 }
                 else
                 {

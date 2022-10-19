@@ -10,7 +10,7 @@
 
 #define BLOCK_MAX_NUM 16383  // a temp max num, remove it later
 #define BATCH_SIZE (2097152U)
-#define THREAD_NUM 4
+#define THREAD_NUM 1
 
 
 
