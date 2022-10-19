@@ -4,7 +4,6 @@
 LogSegment::LogSegment(/* args */)
 {
     for (int i = 0; i < BLOCK_MAX_NUM; i++) {
-        // TODO: use max here for temp, create an init block function later
         log_blocks_[i] = new LogBlock;
     }
     store_stats_ = new StoreStats;
@@ -17,6 +16,11 @@ LogSegment::LogSegment(/* args */)
 
 LogSegment::~LogSegment()
 {
+    for (int i = 0; i < BLOCK_MAX_NUM; i++) {
+        delete log_blocks_[i];
+    } 
+    delete store_stats_;
+    delete table_stats_;
 }
 
 Log::Log(MemPool *mempool, uint64_t init_block_number)

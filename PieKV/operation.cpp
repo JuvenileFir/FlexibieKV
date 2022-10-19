@@ -13,6 +13,12 @@ Piekv::Piekv(int init_log_block_number, int init_block_size, int init_mem_block_
     hashtable_ = new HashTable(mempool_);
 }
 
+Piekv::~Piekv()
+{
+    delete hashtable_;
+    delete log_;
+    delete kMemPool;
+}
 
 bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key, size_t key_length, uint8_t *out_value, uint32_t *in_out_value_length)
 {

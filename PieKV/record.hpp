@@ -1,7 +1,6 @@
-#pragma once
-
 #ifndef RECORD_HPP_
 #define RECORD_HPP_
+
 
 class Record
 {
@@ -13,7 +12,9 @@ public:
 };
 
 
-
+void log_message()
+{
+}
 
 
 

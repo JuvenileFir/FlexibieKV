@@ -13,7 +13,7 @@
 
 // #include "log.hpp"
 // #include "util.h"
-
+#include "record.hpp"
 
 #define MAX_BLOCK_NUM 16384
 
@@ -70,6 +70,7 @@ public:
     temp get_partition_tail();    // TODO: change its name and implement it
     uint32_t alloc_block();
     void memset_block(uint32_t blockNumber); //Q: a function making no sense, consider to remove it later
+    void free_all_blocks();
 
     LogItem *locate_item(const uint32_t blockNumber, uint64_t logOffset);  //Q:another function makes nosense, why don't locate item in Log Class? find where blockNumber come from
 

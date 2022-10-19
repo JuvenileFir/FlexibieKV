@@ -35,7 +35,20 @@ MemPool::MemPool(size_t block_size, size_t block_num_to_init)
 
 MemPool::~MemPool()
 {
+    for (int i = 0; i < blocknum_; i++){
+        free(mem_blocks_[i].ptr);
+    }
+    blocknum_ = 0;
+    blocknum_in_use_ = 0;
+}
 
+void MemPool::free_all_blocks()
+{
+    for (int i = 0; i < blocknum_; i++){
+        free(mem_blocks_[i].ptr);
+    }
+    blocknum_ = 0;
+    blocknum_in_use_ = 0;
 }
 
 /*  

@@ -28,9 +28,8 @@ public:
     
    Piekv(int init_log_block_number, int init_block_size, int init_mem_block_number);
 
-    ~Piekv(){
-
-    }
+    ~Piekv();
+    
     bool H2L(size_t num_pages);   // Q: is num_pages still needed?
     bool L2H(size_t num_pages);   // Q: is num_pages still needed?
     void memFlowingController();
