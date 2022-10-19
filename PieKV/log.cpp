@@ -6,8 +6,10 @@ LogSegment::LogSegment(/* args */)
     for (int i = 0; i < BLOCK_MAX_NUM; i++) {
         log_blocks_[i] = new LogBlock;
     }
-    store_stats_ = new StoreStats;
-    table_stats_ = new TableStats;
+
+    store_stats_ = new StoreStats();
+    table_stats_ = new TableStats();
+    
     blocknum_ = 0;
     usingblock_ = 0;
     offset_ = 0;

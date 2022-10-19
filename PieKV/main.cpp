@@ -169,6 +169,6 @@ int main(int argc, char *argv[]){
         t.join();
     }
     // show_system_status(&mytable);
-
+    // TODO: delete all new here and in signal
     return EXIT_SUCCESS;
 }

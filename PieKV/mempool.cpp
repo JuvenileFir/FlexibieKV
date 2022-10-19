@@ -15,12 +15,12 @@ MemPool::MemPool(size_t block_size, size_t block_num_to_init)
 {
     // TODO: add lock here and add a lock to the entire mempool later
     block_size_ = block_size;
-    // printf("MEM: Initializing pages...\n");
+    printf("MEM: Initializing pages...\n");
 
     for (int i = 0; i < block_num_to_init; i++) {
         void *ptr = mmap(NULL, block_size_, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
         if (ptr == MAP_FAILED) {
-            // printf("MEM: map failed.\n");
+            printf("MEM: map failed.\n");
         }
         mem_blocks_[i].ptr = ptr;
         if (mem_blocks_[i].ptr == NULL) break;   // TODO: what does this mean? and why is it here?
@@ -28,8 +28,8 @@ MemPool::MemPool(size_t block_size, size_t block_num_to_init)
         blocknum_++;
     }
     blocknum_in_use_ = 0;
-    // printf("MEM:   initial allocation of %zu blocks\n", blocknum_);
-    // printf("MEM:   sorting by virtual address\n");
+    printf("MEM:   initial allocation of %zu blocks\n", blocknum_);
+    printf("MEM:   sorting by virtual address\n");
     qsort(mem_blocks_, blocknum_, sizeof(MemBlock), mem_blocks_compare_vaddr);
 }
 
