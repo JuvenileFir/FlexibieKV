@@ -38,7 +38,6 @@ uint32_t read_version_end(const Bucket *bucket UNUSED) {
 void write_unlock_bucket(Bucket *bucket UNUSED) {
 #ifdef TABLE_CONCURRENT
   memory_barrier();
-  printf("bucket version %d in unlock\n",bucket->version);
   assert((*(volatile uint32_t *)&bucket->version & 1U) == 1U);
   // No need to use atomic add because this thread is the only one writing to version
   (*(volatile uint32_t *)&bucket->version)++;

@@ -10,7 +10,7 @@
 
 #define BLOCK_MAX_NUM 16383  // a temp max num, remove it later
 #define BATCH_SIZE (2097152U)
-#define THREAD_NUM 1
+#define THREAD_NUM 4
 
 
 
@@ -60,6 +60,8 @@ public:
     int64_t AllocItem(uint64_t item_size);
     int64_t set_log(uint64_t key_hash, const uint8_t *key, uint32_t key_length, const uint8_t *value,uint32_t value_length, uint32_t expire_time);
     void get_log(uint8_t *out_value, uint32_t *in_out_value_length, const uint32_t block_id, uint64_t log_offset);
+
+    void print_table_stats();
 };
 
 

@@ -15,6 +15,7 @@ Piekv::Piekv(int init_log_block_number, int init_block_size, int init_mem_block_
 
 Piekv::~Piekv()
 {
+    printf("deleting piekv......\n");
     delete hashtable_;
     delete log_;
     delete kMemPool;
@@ -70,27 +71,19 @@ bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key, size_t key_l
 
 bool Piekv::set_check(uint64_t key_hash, const uint8_t *key, size_t key_length) {
   // uint32_t snapshot_is_flexibling = table->is_flexibling;
-  printf("[INFO]set 1.02\n");
   uint32_t snapshot_meta = hashtable_->is_flexibling_;
-  printf("[INFO]set 1\n");
   uint32_t snapshot_is_flexibling = snapshot_meta;
-    printf("[INFO]set 1.1\n");
   uint32_t block_index = hashtable_->round_hash_->HashToBucket(key_hash);
-    printf("[INFO]set 1.2\n");
   Bucket *bucket = (Bucket *)hashtable_->get_block_ptr(block_index);
   tablePosition tp;
-  printf("[INFO]set 1.3\n");
   while (1) {
-    printf("[INFO]set 1.4\n");
     twoBucket tb = cal_two_buckets(key_hash);
-    printf("[INFO]set 1.5\n");
     twoSnapshot ts1;
     while (1) {
       ts1 = read_two_buckets_begin(bucket, tb);
       tp = cuckoo_find(bucket, key_hash, tb, key, key_length);
       if (is_snapshots_same(ts1, read_two_buckets_end(bucket, tb))) break;
     }
-    printf("[INFO]set 1.6\n");
     if (tp.cuckoostatus == failure_key_not_found) {
       if (snapshot_is_flexibling) {
         snapshot_is_flexibling = (uint32_t)0;
@@ -98,11 +91,9 @@ bool Piekv::set_check(uint64_t key_hash, const uint8_t *key, size_t key_length) 
         bucket = (Bucket *)hashtable_->get_block_ptr(block_index);
         continue;
       }
-      printf("[INFO]set 1.7\n");
       return false;
     }
     assert(tp.cuckoostatus == ok);
-printf("[INFO]set 1.8\n");
     if (!is_snapshots_same(ts1, read_two_buckets_end(bucket, tb))) continue;
     return false;
   }
@@ -243,7 +234,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len, 
     segmentToSet->table_stats_->set_success += 1;
 
 #ifdef STORE_COLLECT_STATS
-    STORE_STAT_ADD(store, actual_used_mem, new_item_size);
+    segmentToSet->store_stats_->actual_used_mem += new_item_size;
 #endif
     new_item->item_size = new_item_size;
     segmentToSet->set_item(new_item, key_hash, key, (uint32_t)key_len, val, (uint32_t)val_len, VALID);

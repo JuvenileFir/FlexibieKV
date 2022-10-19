@@ -169,7 +169,6 @@ int64_t HashTable::set_table(tablePosition *tp, twoBucket *tb, uint64_t key_hash
   }
 
   tablePosition tps = cuckoo_insert(bucket, key_hash, tag, *tb, key, key_length);
-  printf("bucket version %d in set_table\n",bucket->version);
 
   tp = &tps;
 
@@ -208,7 +207,7 @@ int64_t HashTable::set_table(tablePosition *tp, twoBucket *tb, uint64_t key_hash
     return -2;//TABLE_STAT_INC(store, set_fail);
   }
   assert(tp->cuckoostatus == ok); 
-  printf("bucket version %d leaving set_table\n",bucket->version);
+  
   return (uint64_t)&bucket[tp->bucket];
  
 }

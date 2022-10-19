@@ -1,5 +1,7 @@
 #include "communication.hpp"
 
+#include <atomic>
+#include <future>
 
 struct rte_mempool *kRecv_mbuf_pool[NUM_QUEUE];
 struct rte_mempool *send_mbuf_pool;
@@ -14,10 +16,15 @@ std::vector<std::thread> workers;
 Piekv *m_piekv;
 
 void sigint_handler(int sig) {
-  
-  __sync_bool_compare_and_swap((volatile Cbool *)(*m_piekv).is_running_, 1U, 0U);
+  printf("run finish job......\n");
+  printf("piekv run: %d",m_piekv->is_running_);
+  __sync_bool_compare_and_swap((volatile Cbool *)m_piekv->is_running_, 1U, 0U);
   for (auto &t : workers) t.join();
   printf("\n");
+  for (int i = 0; i < THREAD_NUM; i++) {
+    m_piekv->log_->log_segments_[i]->print_table_stats();
+    printf("\n\n");
+  }
   // print_table_stats(&mytable);
   printf("[INFO] Everything works fine.\n");
   // for(int i=0;i<4;i++) printf("rx_queue_%d:%ld\n",i,core_statistics[i].rx);
@@ -25,6 +32,11 @@ void sigint_handler(int sig) {
   // TODO:show table status here    show_system_status(&mytable);
   // TODO:free all shm_free_all();
   exit(EXIT_SUCCESS);
+}
+
+template <typename Signal, typename... Args>
+void addSignal(Signal& sigset, Args... args) {
+  (sigaddset(&sigset, args), ...);
 }
 
 void port_init() {
@@ -111,6 +123,10 @@ void port_init() {
   rte_eth_promiscuous_enable(port);
 }
 
+void print_piekv()
+{
+  printf("piekv run: %d",m_piekv->is_running_);
+}
 
 int main(int argc, char *argv[]){
     int ch;
@@ -146,10 +162,52 @@ int main(int argc, char *argv[]){
             break;
         }
     }
-    std::signal(SIGINT, sigint_handler);
+
+    sigset_t sigset;
+    sigemptyset(&sigset);
+    addSignal(sigset, SIGINT);
+    pthread_sigmask(SIG_BLOCK, &sigset, nullptr);
+    std::atomic<bool> close{false};
+    auto sig_handler = [&close, &sigset]()
+    {
+      int signum{-1};
+      sigwait(&sigset, &signum);
+      close.store(true);
+      return signum;
+    };
+
+    
+    auto fut = std::async(std::launch::async, sig_handler);
+    auto h1 = [&close](Piekv *n_piekv)
+                          {
+      printf("piekv run: %d\n", n_piekv->is_running_);             
+      while (!close.load()) {}
+      printf("running finish job......\n");
+
+      printf("piekv run: %d\n", n_piekv->is_running_);
+      __sync_bool_compare_and_swap((volatile Cbool *)n_piekv->is_running_, 1U, 0U);
+      for (auto &t : workers)
+        t.join();
+      printf("\n");
+      for (int i = 0; i < THREAD_NUM; i++)
+      {
+        n_piekv->log_->log_segments_[i]->print_table_stats();
+        printf("\n\n");
+      }
+      // print_table_stats(&mytable);
+      printf("[INFO] Everything works fine.\n");
+      // for(int i=0;i<4;i++) printf("rx_queue_%d:%ld\n",i,core_statistics[i].rx);
+      fflush(stdout);
+      // TODO:show table status here    show_system_status(&mytable);
+      // TODO:free all shm_free_all();
+      exit(EXIT_SUCCESS); 
+    };
+
+    // std::signal(SIGINT, sigint_handler);
 
     port_init();
     m_piekv = new Piekv(pages, kblock_size, num_mem_blocks);
+    auto t1 = std::thread(h1,m_piekv);
 
     // show_system_status(&mytable);
     RTWorker *m_rtworkers[4];
@@ -165,10 +223,32 @@ int main(int argc, char *argv[]){
 
     if (flow_mode == 3) workers.push_back(std::thread(&Piekv::memFlowingController,m_piekv));
 
+    // show_system_status(&mytable);
+    // TODO: delete all new here and in signal
+    int input = 123;
+    while(scanf("%d",&input)){
+      if (input == 0){     
+        printf("running finish job......\n");
+        __sync_bool_compare_and_swap((volatile Cbool *)&(m_piekv->is_running_), 1U, 0U);
+        for (auto &t : workers)
+          t.join();
+        printf("\n");
+        for (int i = 0; i < THREAD_NUM; i++)
+        {
+          m_piekv->log_->log_segments_[i]->print_table_stats();
+          printf("\n\n");
+        }
+        printf("[INFO] Everything works fine.\n");fflush(stdout);
+        exit(EXIT_SUCCESS); 
+      }
+    }
+
     for (auto &t : workers) {
         t.join();
     }
-    // show_system_status(&mytable);
-    // TODO: delete all new here and in signal
+
+    auto sig_num = fut.get();
+    t1.join();
+
     return EXIT_SUCCESS;
 }

@@ -212,7 +212,6 @@ void LogSegment::set_item(struct LogItem *item, uint64_t key_hash, const uint8_t
 
 LogItem *LogSegment::locateItem(const uint32_t block_id, uint64_t log_offset)
 {
-    printf("[INFO] block id: %d   block num: %d  log offset: %d\n",block_id, blocknum_, log_offset);
     return (LogItem *)(log_blocks_[block_id]->block_ptr + log_offset);
 }
 
@@ -244,4 +243,23 @@ int64_t LogSegment::AllocItem(uint64_t item_size) {
         // TODO: implement a function `big_set`
         return -2;  // batch_too_small
     }
+}
+
+
+void LogSegment::print_table_stats() {
+  printf("count:                  %10zu\n", table_stats_->count);
+  printf("set_nooverwrite:        %10zu | ", table_stats_->set_nooverwrite);
+  printf("set_success:            %10zu | ", table_stats_->set_success);
+  printf("set_fail:               %10zu\n", table_stats_->set_fail);
+  printf("set_inplace:            %10zu | ", table_stats_->set_inplace);
+  printf("set_evicted:            %10zu\n", table_stats_->set_evicted);
+  printf("get_found:              %10zu | ", table_stats_->get_found);
+  printf("get_notfound:           %10zu\n", table_stats_->get_notfound);
+  printf("test_found:             %10zu | ", table_stats_->test_found);
+  printf("test_notfound:          %10zu\n", table_stats_->test_notfound);
+  printf("cleanup:                %10zu\n", table_stats_->cleanup);
+  printf("move_to_head_performed: %10zu | ", table_stats_->move_to_head_performed);
+  printf("move_to_head_skipped:   %10zu | ", table_stats_->move_to_head_skipped);
+  printf("move_to_head_failed:    %10zu\n", table_stats_->move_to_head_failed);
+
 }
