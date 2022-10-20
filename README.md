@@ -21,6 +21,15 @@ graph LR
 	
 
 ```
+<details>
+<summary>Class Piekv</summary>
+<details>
+	<summary>Class HashTable</summary>
+		- time
+		- way
+	</details>
+</details>
+
 - Super Class
     - Class HashTable
         - Class RoundHash round_hash_
