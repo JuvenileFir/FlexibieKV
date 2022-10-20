@@ -33,3 +33,8 @@
 
 # VSCode
 .vscode
+
+PieKV/build/*
+PieKV/CMakeFiles
+PieKV/CMakeCache.txt
+PieKV/cmake_install.cmake

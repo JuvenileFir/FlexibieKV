@@ -93,6 +93,16 @@ typedef uint32_t Cbool;
 
 EXTERN_BEGIN
 
+
+
+typedef enum PiekvStatus {
+  SUCCESS_SET,
+  BATCH_FULL,
+  BATCH_TOO_SMALL,
+  FAILURE_ALREADY_EXIST,
+  FAILURE_HASHTABLE_FULL,
+} PiekvStatus;
+
 static inline void memory_barrier() { asm volatile("" ::: "memory"); }
 
 static inline size_t next_power_of_two(size_t v) {
@@ -101,24 +111,6 @@ static inline size_t next_power_of_two(size_t v) {
   return (size_t)1 << s;
 }
 
-typedef struct log_item {
-  uint64_t item_size;
-  uint32_t expire_time;
-  uint32_t kv_length_vec;
-  /* key_length: 8, value_length: 24; kv_length_vec == 0: empty item */
-
-#define ITEMKEY_MASK (((uint32_t)1 << 8) - 1)
-#define ITEMKEY_LENGTH(kv_length_vec) ((kv_length_vec) >> 24)
-
-#define ITEMVALUE_MASK (((uint32_t)1 << 24) - 1)
-#define ITEMVALUE_LENGTH(kv_length_vec) ((kv_length_vec)&ITEMVALUE_MASK)
-
-#define ITEMKV_LENGTH_VEC(key_length, value_length) (((uint32_t)(key_length) << 24) | (uint32_t)(value_length))
-
-  /* the rest is meaningful only when kv_length_vec != 0 */
-  uint64_t key_hash;
-  uint8_t data[0];
-} log_item ALIGNED(64);
 
 static inline size_t shm_adjust_size(size_t size) { return (uint64_t)ROUNDUP2M(size); }
 

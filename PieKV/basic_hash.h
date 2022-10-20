@@ -1,8 +1,8 @@
 #pragma once
 
-#include "shm.h"
-
 #include <stdint.h>
+#include "mempool.hpp"
+#include "util.h"
 
 #define TAG_MASK (((uint64_t)1 << 15) - 1)
 #define TAG(item_vec) ((item_vec) >> 48)
@@ -17,7 +17,6 @@
 #define ITEM_VEC(tag, pageNumber, item_offset) \
   (((uint64_t)(tag) << 48) | ((uint64_t)(pageNumber) << 27) | (uint64_t)(item_offset))
 
-EXTERN_BEGIN
 
 typedef enum cuckooStatus {
   ok,
@@ -44,7 +43,7 @@ typedef struct tablePosition {
   enum cuckooStatus cuckoostatus;
 } tablePosition;
 
-typedef struct page_bucket {
+/* typedef struct page_bucket {
   uint32_t version;  // XXX: Is uint32_t wide enough?
 #ifdef ITEMS_PER_BUCKET_7
 #define bitmap uint8_t
@@ -64,27 +63,42 @@ typedef struct page_bucket {
   // 16: tag (1-base)
   // 48: item offset
   // item == 0: empty item
-} page_bucket ALIGNED(64);
+} page_bucket ALIGNED(64); */
+
+typedef struct Bucket
+{
+    uint32_t version;
+    uint8_t occupy_bitmap;
+    uint8_t lock;
+    uint16_t padding;
+    uint64_t item_vec[7];
+} Bucket;     //  ALIGNED(64)
 
 uint16_t calc_tag(uint64_t key_hash);
 
-uint32_t read_version_begin(const page_bucket *bucket UNUSED);
+uint32_t read_version_begin(const Bucket *bucket UNUSED);
 
-uint32_t read_version_end(const page_bucket *bucket UNUSED);
+uint32_t read_version_end(const Bucket *bucket UNUSED);
 
-void write_lock_bucket(page_bucket *bucket UNUSED);
+inline void write_lock_bucket(Bucket *bucket UNUSED) {
+  while (1) {
+    uint32_t v = *(volatile uint32_t *)&bucket->version & ~1U;
+    uint32_t new_v = v | 1U;
+    if (__sync_bool_compare_and_swap((volatile uint32_t *)&bucket->version, v, new_v)) break;
+  }
+}
 
-void write_unlock_bucket(page_bucket *bucket UNUSED);
+void write_unlock_bucket(Bucket *bucket UNUSED);
 
 Cbool is_entry_expired(uint64_t index_entry);
 
 Cbool key_eq(const uint8_t *key1, size_t key1_len, const uint8_t *key2, size_t key2_len);
 
-uint16_t try_read_from_bucket(const page_bucket *bucket, const uint16_t tag, const uint8_t *key, uint32_t keylength);
+uint16_t try_read_from_bucket(const Bucket *bucket, const uint16_t tag, const uint8_t *key, uint32_t keylength);
 
-uint16_t try_find_slot(const page_bucket *bucket, const uint16_t tag, const uint64_t offset);
+uint16_t try_find_slot(const Bucket *bucket, const uint16_t tag, const uint64_t offset);
 
-Cbool try_find_insert_bucket(const page_bucket *bucket_, uint32_t *slot, const uint16_t tag, const uint8_t *key,
+Cbool try_find_insert_bucket(const Bucket *bucket_, uint32_t *slot, const uint16_t tag, const uint8_t *key,
                              uint32_t keylength);
 
-EXTERN_END
+

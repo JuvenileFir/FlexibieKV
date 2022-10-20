@@ -3,10 +3,10 @@
 #define _CUCKOO_
 
 #include "basic_hash.h"
+#include "util.h"
 
 #include <math.h>
 
-EXTERN_BEGIN
 
 #define MAX_CUCKOO_COUNT 5602U
 // 2 * ((ITEMS_PER_BUCKET == 1)
@@ -76,38 +76,40 @@ typedef struct bQueue {
   uint32_t last_;
 } bQueue;
 
+struct Bucket;
+struct tablePosition;
+
 struct twoBucket cal_two_buckets(uint64_t keyhash);
 
 uint32_t alt_bucket(uint32_t b1, uint16_t tag);
 
 void swap_uint(uint32_t *i1, uint32_t *i2);
 
-void lock_two_buckets(page_bucket *partition, struct twoBucket twobuckets);
+void lock_two_buckets(Bucket *partition, struct twoBucket twobuckets);
 
-void unlock_two_buckets(page_bucket *partition, struct twoBucket twobuckets);
+void unlock_two_buckets(Bucket *partition, struct twoBucket twobuckets);
 
-void lock_three_buckets(page_bucket *partition, uint32_t b1, uint32_t b2, uint32_t extrab);
+void lock_three_buckets(Bucket *partition, uint32_t b1, uint32_t b2, uint32_t extrab);
 
-twoSnapshot read_two_buckets_begin(page_bucket *partition, struct twoBucket tb);
+twoSnapshot read_two_buckets_begin(Bucket *partition, struct twoBucket tb);
 
-twoSnapshot read_two_buckets_end(page_bucket *partition, struct twoBucket tb);
+twoSnapshot read_two_buckets_end(Bucket *partition, struct twoBucket tb);
 
 Cbool is_snapshots_same(struct twoSnapshot ts1, struct twoSnapshot ts2);
 
-tablePosition cuckoo_find(page_bucket *partition, uint64_t keyhash, struct twoBucket tb, const uint8_t *key,
+tablePosition cuckoo_find(Bucket *partition, uint64_t keyhash, struct twoBucket tb, const uint8_t *key,
                           uint32_t keylength);
 
-tablePosition cuckoo_find_shallow(page_bucket *partition, struct twoBucket tb, uint64_t offset, uint16_t tag);
+tablePosition cuckoo_find_shallow(Bucket *partition, struct twoBucket tb, uint64_t offset, uint16_t tag);
 
-tablePosition cuckoo_insert(page_bucket *partition, uint64_t keyhash, uint16_t tag, struct twoBucket tb,
+tablePosition cuckoo_insert(Bucket *partition, uint64_t keyhash, uint16_t tag, struct twoBucket tb,
                             const uint8_t *key, size_t keylength);
 
-cuckooStatus run_cuckoo(page_bucket *partition, struct twoBucket tb, uint32_t *insertbucket, uint32_t *insertslot);
+cuckooStatus run_cuckoo(Bucket *partition, struct twoBucket tb, uint32_t *insertbucket, uint32_t *insertslot);
 
-int cuckoopath_search(page_bucket *partition, cuckooRecord *cuckoopath, const uint32_t b1, const uint32_t b2);
+int cuckoopath_search(Bucket *partition, cuckooRecord *cuckoopath, const uint32_t b1, const uint32_t b2);
 
-struct bSlot slot_search(page_bucket *partition, const uint32_t b1, const uint32_t b2);
+struct bSlot slot_search(Bucket *partition, const uint32_t b1, const uint32_t b2);
 
-Cbool cuckoopath_move(page_bucket *partition, cuckooRecord *cuckoopath, int depth, twoBucket *tb);
+Cbool cuckoopath_move(Bucket *partition, cuckooRecord *cuckoopath, int depth, twoBucket *tb);
 
-EXTERN_END

@@ -1,10 +1,14 @@
 #pragma once
 
-#include <cstdint>    // temp , remove it if you want to define your own uint32_t
 #include <cstdlib>
 
 #include "roundhash.hpp"
-#include "mempool.hpp"
+// #include "mempool.hpp"
+#include "cuckoo.h"
+
+#define MAX_KEY_LENGTH 255
+#define MAX_VALUE_LENGTH 1048575
+
 using namespace std;
 
 typedef struct TableStats
@@ -27,15 +31,8 @@ typedef struct TableStats
     size_t move_to_head_failed;
 }TableStats;
 
-
-typedef struct Bucket
-{
-    uint32_t version;
-    uint8_t occupt_bitmap;
-    uint8_t lock;
-    uint16_t padding;
-    uint64_t item_vec[7];
-} Bucket;    // ALIGNED(64), use alignas(64) when imply this struct
+ 
+ // ALIGNED(64), use alignas(64) when imply this struct
 
 
 typedef struct TableBlock
@@ -50,21 +47,28 @@ class HashTable
 {
 private:
     /* hash table data */
+public:
     TableBlock *table_blocks_[MAX_BLOCK_NUM - 1];//
     TableStats table_stats_;
-    RoundHash round_hash_;
+    RoundHash *round_hash_;
     uint32_t table_block_num_;//combine "hash_table.num_partitions" & "PartitionMap.numOfpartitions"
     uint32_t is_setting_;
     uint32_t is_flexibling_;
     uint32_t current_version_;
-public:
+    MemPool *mempool_;
+    
     HashTable(MemPool* mempool);
     ~HashTable();
     void *get_block_ptr(uint32_t tableIndex);
     uint32_t get_block_id(uint32_t tableIndex);
     void AddBlock(uint8_t *pheader, uint32_t block_id); //former partitionMap_add()
     void RemoveBlock();
-    void ShrinkTable(size_t blockNum);//H2L中的hashtable部分
-    void ExpandTable(size_t blockNum);//L2H中的hashtable部分
+    void ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_move);//H2L中的hashtable部分
+    void ExpandTable(TableBlock **tableblocksToMove, size_t blocknum_to_move);//L2H中的hashtable部分
+    int64_t get_table(twoSnapshot *ts1, twoBucket *tb,  Bucket * bucket, uint64_t key_hash, const uint8_t *key, size_t key_length);
+    int64_t set_table(tablePosition *tp, twoBucket *tb, uint64_t key_hash, const uint8_t *key, size_t key_length);
+
+    void redistribute_last_short_group(size_t *parts, size_t count);
+    void redistribute_first_long_group(size_t *parts, size_t count);
 
 };

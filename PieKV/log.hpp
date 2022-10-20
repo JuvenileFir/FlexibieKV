@@ -1,19 +1,29 @@
+#pragma once
+
 #ifndef LOG_HPP_
 #define LOG_HPP_
 
 #include <cstdint>
-#include "mempool.hpp"
+// #include "mempool.hpp"
 #include "hashtable.hpp"
+// #include "util.h"
 
-#define MAX 100  // a temp max num, remove it later
+#define BLOCK_MAX_NUM 16383  // a temp max num, remove it later
 #define BATCH_SIZE (2097152U)
 #define THREAD_NUM 4
 
+
+
+
 typedef struct StoreStats
 {
-    /* data */
+    size_t actual_used_mem;
+    size_t wasted;
 }StoreStats;
 
+struct TableStats;
+struct TableBlock;
+class MemPool;
 
 
 
@@ -32,7 +42,7 @@ class LogSegment
 private:
     /* data */
 public:
-    LogBlock *log_blocks_[MAX];   // TODO: use SHM_MAX_PAGES - 1 here later
+    LogBlock *log_blocks_[BLOCK_MAX_NUM];   // TODO: use SHM_MAX_PAGES - 1 here later
     StoreStats *store_stats_;
     TableStats *table_stats_;
     uint32_t blocknum_;
@@ -43,7 +53,15 @@ public:
     LogSegment(/* args */);
     ~LogSegment();
 
+    
+    LogItem *locateItem(const uint32_t block_id, uint64_t log_offset);
+    void set_item(struct LogItem *item, uint64_t key_hash, const uint8_t *key, uint32_t key_length, const uint8_t *value,uint32_t value_length, uint32_t expire_time);
+
     int64_t AllocItem(uint64_t item_size);
+    int64_t set_log(uint64_t key_hash, const uint8_t *key, uint32_t key_length, const uint8_t *value,uint32_t value_length, uint32_t expire_time);
+    void get_log(uint8_t *out_value, uint32_t *in_out_value_length, const uint32_t block_id, uint64_t log_offset);
+
+    void print_table_stats();
 };
 
 
@@ -61,10 +79,10 @@ public:
     uint16_t total_segmentnum_;
 
 
-    Log(/* args */);
+    Log(MemPool *mempool, uint64_t init_block_number);
     ~Log();
 
-    void Shrink(uint64_t numBlockToShrink);
+    void Shrink(TableBlock **tableblocksToMove, uint64_t numBlockToShrink);
     void Expand(TableBlock **tableblocksToMove, uint64_t numBlockToExpand, size_t blockSize);
 
     uint16_t get_next_resize_segment_id(int expandOrShrink); // expand: 0  shrink: 1
