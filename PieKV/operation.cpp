@@ -123,7 +123,6 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len, 
     uint32_t block_index = hashtable_->round_hash_->HashToBucket(key_hash);
     Bucket *bucket = (Bucket *)hashtable_->get_block_ptr(block_index);
 
-#ifdef _CUCKOO_
     /*
      * XXX: Temporarily, the first bucket's `lock` of a partiton is used for
      * lock this bucket. When we execute a `set` that needs to displace
@@ -147,7 +146,6 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len, 
     // memory_barrier();
     assert((*(volatile uint8_t *)&bucket->lock) > 1);
     __sync_fetch_and_sub((volatile uint8_t *)&(bucket->lock), (uint8_t)2);
-#endif
     if (tp.cuckoostatus == failure_table_full)
     {
         // TODO: support eviction
@@ -169,9 +167,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len, 
     {
         // TODO: support overwrite
         // overwriting = true;
-#ifdef _CUCKOO_
         unlock_two_buckets(bucket, tb);
-#endif
 #ifdef EXP_LATENCY
         auto end = std::chrono::steady_clock::now();
 #ifdef TRANSITION_ONLY
@@ -241,9 +237,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len, 
     
     located_bucket->item_vec[tp.slot] = ITEM_VEC(tag, block_id, item_offset);
 
-#ifdef _CUCKOO_
     unlock_two_buckets(bucket, tb);
-#endif
     log_->log_segments_[t_id]->table_stats_->count += 1;
 
 #ifdef EXP_LATENCY
@@ -313,10 +307,8 @@ printf("bucket version %d in set\n",bucket->version);
 
     located_bucket->item_vec[tp->slot] = ITEM_VEC(tag, block_id, item_offset);
     printf("[INFO]set 8\n");
-    #ifdef _CUCKOO_
     printf("bucket version %d before unlock\n",bucket->version);
     unlock_two_buckets(bucket, *tb);
-    #endif
     segmentToSet->table_stats_->count += 1;
 
     #ifdef EXP_LATENCY

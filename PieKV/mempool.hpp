@@ -9,12 +9,8 @@
 #include <cstring>
 #include <cstdlib>
 #include <cstdio>
-
 #include <sys/mman.h>    // TODO: find an alternative later
 
-// #include "log.hpp"
-// #include "util.h"
-// #include "record.hpp"
 
 #define MAX_BLOCK_NUM 16384
 

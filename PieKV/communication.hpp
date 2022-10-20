@@ -1,9 +1,7 @@
-
 #ifndef COMMUNICATION_HPP_
 #define COMMUNICATION_HPP_
 
 #include <cstdint>
-
 #include <rte_eal.h>
 #include <rte_ethdev.h>
 #include <rte_cycles.h>
@@ -12,8 +10,6 @@
 #include <rte_byteorder.h>
 #include <rte_ip.h>
 #include <rte_ether.h>
-
-
 #include "piekv.hpp"
 
 #define SET_THREAD_NUM 10

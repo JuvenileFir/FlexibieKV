@@ -3,14 +3,11 @@
 #ifndef PIEKV_HPP_
 #define PIEKV_HPP_
 
-// #include "hashtable.hpp"
-#include "log.hpp"
-// #include "basic_hash.h"
-// #include "cuckoo.h"
 #include <thread>
-
 #include <vector>
 #include <csignal>
+#include "log.hpp"
+
 
 extern MemPool *kMemPool;
 
