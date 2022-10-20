@@ -23,8 +23,10 @@ graph LR
 ```
 <details>
 <summary>Class Piekv</summary>
+	
 <details>
 	<summary>Class HashTable</summary>
+	
 		- time
 		- way
 	</details>
