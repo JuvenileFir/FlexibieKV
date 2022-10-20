@@ -87,7 +87,7 @@ bool Piekv::set_check(uint64_t key_hash, const uint8_t *key, size_t key_length) 
     if (tp.cuckoostatus == failure_key_not_found) {
       if (snapshot_is_flexibling) {
         snapshot_is_flexibling = (uint32_t)0;
-        block_index = hashtable_->round_hash_->HashToBucket(key_hash);
+        block_index = hashtable_->round_hash_new_->HashToBucket(key_hash);
         bucket = (Bucket *)hashtable_->get_block_ptr(block_index);
         continue;
       }

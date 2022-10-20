@@ -1,8 +1,5 @@
 #include "communication.hpp"
 
-#include <atomic>
-#include <future>
-
 struct rte_mempool *kRecv_mbuf_pool[NUM_QUEUE];
 struct rte_mempool *send_mbuf_pool;
 
@@ -163,51 +160,11 @@ int main(int argc, char *argv[]){
         }
     }
 
-    sigset_t sigset;
-    sigemptyset(&sigset);
-    addSignal(sigset, SIGINT);
-    pthread_sigmask(SIG_BLOCK, &sigset, nullptr);
-    std::atomic<bool> close{false};
-    auto sig_handler = [&close, &sigset]()
-    {
-      int signum{-1};
-      sigwait(&sigset, &signum);
-      close.store(true);
-      return signum;
-    };
-
     
-    auto fut = std::async(std::launch::async, sig_handler);
-    auto h1 = [&close](Piekv *n_piekv)
-                          {
-      printf("piekv run: %d\n", n_piekv->is_running_);             
-      while (!close.load()) {}
-      printf("running finish job......\n");
-
-      printf("piekv run: %d\n", n_piekv->is_running_);
-      __sync_bool_compare_and_swap((volatile Cbool *)&(n_piekv->is_running_), 1U, 0U);
-      for (auto &t : workers)
-        t.join();
-      printf("\n");
-      for (int i = 0; i < THREAD_NUM; i++)
-      {
-        n_piekv->log_->log_segments_[i]->print_table_stats();
-        printf("\n\n");
-      }
-      // print_table_stats(&mytable);
-      printf("[INFO] Everything works fine.\n");
-      // for(int i=0;i<4;i++) printf("rx_queue_%d:%ld\n",i,core_statistics[i].rx);
-      fflush(stdout);
-      // TODO:show table status here    show_system_status(&mytable);
-      // TODO:free all shm_free_all();
-      exit(EXIT_SUCCESS); 
-    };
-
     // std::signal(SIGINT, sigint_handler);
 
     port_init();
     m_piekv = new Piekv(pages, kblock_size, num_mem_blocks);
-    auto t1 = std::thread(h1,m_piekv);
 
     // show_system_status(&mytable);
     RTWorker *m_rtworkers[4];
@@ -222,6 +179,8 @@ int main(int argc, char *argv[]){
     }
     
     if (flow_mode == 3) workers.push_back(std::thread(&Piekv::memFlowingController,m_piekv));
+
+
 
     // show_system_status(&mytable);
     // TODO: delete all new here and in signal
@@ -250,12 +209,10 @@ int main(int argc, char *argv[]){
       }
     }
 
+
     for (auto &t : workers) {
         t.join();
     }
-
-    auto sig_num = fut.get();
-    t1.join();
 
     return EXIT_SUCCESS;
 }
