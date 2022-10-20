@@ -22,20 +22,60 @@ graph LR
 
 ```
 <details>
-<summary>Super Class</summary>
 
+<summary>Class Piekv</summary>
+	
+<details>
+	<summary>Class HashTable</summary>
+	
+		- time
+		- way
+	</details>
+</details>
 
- 
-- Class HashTable
-    - Class RoundHash round_hash_
-        - uint64_t num_long_arcs
-        - uint64_t num_short_arcs
-        - uint64_t num_long_arc_group
-        - uint64_t num_arc_group
-        - uint64_t curent_s
-        - uint64_t S_
-        - uint64_t S_minus_one
-        - uint64_t S_log
+- Super Class
+    - Class HashTable
+        - Class RoundHash round_hash_
+            - uint64_t num_long_arcs
+            - uint64_t num_short_arcs
+            - uint64_t num_long_arc_group
+            - uint64_t num_arc_group
+            - uint64_t curent_s
+            - uint64_t S_
+            - uint64_t S_minus_one
+            - uint64_t S_log
+            
+            Fuction:
+            
+            - RoundHash()
+            - get_block_num() ✔️
+            - ArcNum() ✔️
+            - HashToArc() ✔️
+            - ArcToBucket() ✔️
+            - HashToBucket() ✔️//原计算函数`RoundHash()`
+            - NewBucket() ✔️
+            - DelBucket() ✔️
+            - get_parts_to_remove() ✔️
+            - get_parts_to_add() ✔️
+            - ~RoundHash()
+        - Struct table_block[MAX]
+            - void * blockptr
+            - uint32_t blockID
+        - Struct bucket ALIGNED(64)
+            
+            uint32_t version;
+            
+            uint8_t occupy_bitmap;2222222222
+            
+            uint8_t lock;//???
+            
+            uint16_t padding;
+            
+            uint64_t item_vec[7];//***8bit tag+8bit round+48 GID&offset***
+            
+        - Struct TableStats table_stats_
+        - uint32_t table_block_num_
+
         
         Fuction:
         
