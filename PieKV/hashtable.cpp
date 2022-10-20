@@ -66,6 +66,7 @@ void HashTable::ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 				break;
 		}
 		*(volatile uint32_t *)&(is_flexibling_) = 1U;
+    swap_group_maps();
 		__sync_fetch_and_sub((volatile uint32_t *)&(is_setting_), 1U);
 
 		this->redistribute_last_short_group(parts, count);
@@ -79,7 +80,6 @@ void HashTable::ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 				break;
 		}
 		*(volatile uint32_t *)&(is_flexibling_) = 0U;
-    swap_group_maps();
 		__sync_fetch_and_sub((volatile uint32_t *)&(is_setting_), 1U);
 	}
 }
@@ -98,6 +98,7 @@ void HashTable::ExpandTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 				break;
 		}
 		*(volatile uint32_t *)&(is_flexibling_) = 1U;
+    swap_group_maps();
 		__sync_fetch_and_sub((volatile uint32_t *)&(is_setting_), 1U);
 
 		this->redistribute_first_long_group(parts, count);
@@ -225,7 +226,7 @@ void HashTable::redistribute_last_short_group(size_t *parts, size_t count) {
   int32_t k = count - 2;
   Bucket *buckets;
   Bucket *work_block;
-  Bucket *workb;
+  Bucket *work_bucket;
   // uint8_t key[MAX_KEY_LENGTH];
   struct LogItem *item;
   struct twoBucket tb;
@@ -277,8 +278,8 @@ void HashTable::redistribute_last_short_group(size_t *parts, size_t count) {
             }
             assert(tp.cuckoostatus == ok);
 
-            workb = &(work_block[tp.bucket]);
-            workb->item_vec[tp.slot] = buckets[bucket_index].item_vec[entry_index];
+            work_bucket = &(work_block[tp.bucket]);
+            work_bucket->item_vec[tp.slot] = buckets[bucket_index].item_vec[entry_index];
             unlock_two_buckets(work_block, tb);
 
             /* ToThink:
@@ -324,7 +325,7 @@ void HashTable::redistribute_first_long_group(size_t *parts, size_t count) {
         if (!is_entry_expired(bucket[bucket_index].item_vec[entry_index])) {
           item = mempool_->locate_item(PAGE(bucket[bucket_index].item_vec[entry_index]),
                                  ITEM_OFFSET(bucket[bucket_index].item_vec[entry_index]));
-          target_p = round_hash_->HashToBucket(item->key_hash);
+          target_p = round_hash_new_->HashToBucket(item->key_hash);
           if (target_p != parts[k]) {
             workp = (struct Bucket *)get_block_ptr(target_p);
             tb = cal_two_buckets(item->key_hash);
