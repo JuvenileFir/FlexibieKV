@@ -5,7 +5,9 @@
 RTWorker::RTWorker(Piekv *piekv, size_t t_id, struct rte_mempool *send_mbuf_pool)
 {
     piekv_ = piekv;
+    t_id_ = t_id;
     core_id = t_id;
+
     if (set_core_affinity)
     {
         cpu_set_t mask;
@@ -68,7 +70,7 @@ void RTWorker::send_packet()
 #endif
             check_pkt_end(tx_bufs_pt[k]);
         }
-        nb_tx = rte_eth_tx_burst(port, t_id, tx_bufs_pt, PKG_GEN_COUNT);
+        nb_tx = rte_eth_tx_burst(port, t_id_, tx_bufs_pt, PKG_GEN_COUNT);
         core_statistics[core_id].tx += nb_tx;
         pkt_id = 0;
     }
@@ -84,7 +86,7 @@ void RTWorker::parse_set(){
     uint64_t key_hash = *(uint64_t *)(ptr + sizeof(RxSet_Packet)+ rxset_packet->key_len);
     
 
-    bool ret = piekv_->set(t_id, key_hash, 
+    bool ret = piekv_->set(t_id_, key_hash, 
                       ptr + sizeof(RxSet_Packet), rxset_packet->key_len,
                       ptr + sizeof(RxSet_Packet) + rxset_packet->key_len + rxset_packet->key_hash_len,
                        rxset_packet->val_len , false);
@@ -122,7 +124,7 @@ void RTWorker::parse_get()
 
 
     // perform get operation, ret represents success or not
-    bool ret = piekv_->get(t_id, 
+    bool ret = piekv_->get(t_id_, 
                     key_hash, 
                     key, 
                     rxget_packet->key_len, 
@@ -215,7 +217,6 @@ bool RTWorker::pkt_filter(const struct rte_mbuf *pkt)
 
 void RTWorker::worker_proc()
 {
-
     bool ret;
     uint64_t key_hash;
     uint32_t key_len, key_hash_len, val_len;
@@ -223,7 +224,7 @@ void RTWorker::worker_proc()
     tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + EIU_HEADER_LEN;
     while (piekv_->is_running_)
     {
-        nb_rx = rte_eth_rx_burst(port, t_id, rx_buf, BURST_SIZE);
+        nb_rx = rte_eth_rx_burst(port, t_id_, rx_buf, BURST_SIZE);
 
         core_statistics[core_id].rx += nb_rx;
 
@@ -293,7 +294,7 @@ void RTWorker::worker_proc()
 #endif
                     check_pkt_end(tx_bufs_pt[k]);
                 }
-                nb_tx = rte_eth_tx_burst(port, t_id, tx_bufs_pt, pkt_id);
+                nb_tx = rte_eth_tx_burst(port, t_id_, tx_bufs_pt, pkt_id);
                 core_statistics[core_id].tx += nb_tx;
                 pkt_id = 0;
                 pktlen = EIU_HEADER_LEN;
@@ -304,4 +305,6 @@ void RTWorker::worker_proc()
             rte_pktmbuf_free(rx_buf[i]);
         }
     }
+
+    printf("%d\n", t_id_);
 }

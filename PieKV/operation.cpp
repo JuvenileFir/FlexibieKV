@@ -25,7 +25,7 @@ bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key, size_t key_l
 {
 
     LogSegment *segmentToGet = log_->log_segments_[t_id];
-    #ifdef EXP_LATENCY
+   #ifdef EXP_LATENCY
     Cbool isTransitionPeriod = hashtable_->is_flexibling_;
     auto start = std::chrono::steady_clock::now();
     #endif

@@ -145,7 +145,7 @@ private:
 
     RT_Counter rt_counter_;
 
-    size_t t_id;
+    size_t t_id_;
     int core_id;
     uint8_t *ptr = NULL;
     uint16_t port = 0;

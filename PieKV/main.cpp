@@ -185,7 +185,7 @@ int main(int argc, char *argv[]){
       printf("running finish job......\n");
 
       printf("piekv run: %d\n", n_piekv->is_running_);
-      __sync_bool_compare_and_swap((volatile Cbool *)n_piekv->is_running_, 1U, 0U);
+      __sync_bool_compare_and_swap((volatile Cbool *)&(n_piekv->is_running_), 1U, 0U);
       for (auto &t : workers)
         t.join();
       printf("\n");
@@ -220,7 +220,7 @@ int main(int argc, char *argv[]){
 
             workers.push_back(std::thread(&RTWorker::worker_proc,m_rtworkers[id]));
     }
-
+    
     if (flow_mode == 3) workers.push_back(std::thread(&Piekv::memFlowingController,m_piekv));
 
     // show_system_status(&mytable);
@@ -240,6 +240,13 @@ int main(int argc, char *argv[]){
         }
         printf("[INFO] Everything works fine.\n");fflush(stdout);
         exit(EXIT_SUCCESS); 
+      }
+      if (input == 1) {
+        for (int i = 0; i < THREAD_NUM; i++)
+        {
+          m_piekv->log_->log_segments_[i]->print_table_stats();
+          printf("\n\n");
+        }
       }
     }
 
