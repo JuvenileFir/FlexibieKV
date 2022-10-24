@@ -53,7 +53,6 @@ bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key, size_t key_l
         segmentToGet->get_log(out_value,in_out_value_length,block_id,item_offset);
         if (!is_snapshots_same(*ts1, read_two_buckets_end(bucket, *tb))) continue;
 
-
         break;
     }
     #ifdef EXP_LATENCY
@@ -100,15 +99,15 @@ bool Piekv::set_check(uint64_t key_hash, const uint8_t *key, size_t key_length) 
   return true;
 }
 
-bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len, uint8_t *val, uint32_t val_len, bool overwrite)
-{
+bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
+                uint8_t *val, uint32_t val_len, bool overwrite) {
     assert(key_len <= MAX_KEY_LENGTH);
     assert(val_len <= MAX_VALUE_LENGTH);
 
     LogSegment *segmentToSet = log_->log_segments_[t_id];
 
 #ifdef EXP_LATENCY
-    Cbool isTransitionPeriod = table->is_flexibling;
+    Cbool isTransitionPeriod = hashtable_->is_flexibling_;
     auto start = std::chrono::steady_clock::now();
 #endif
 
@@ -132,8 +131,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len, 
      * is the possibility for losing slot(s). So locking the bucket with FIFO
      * policy is the simplest way.
      */
-    while (1)
-    {
+    while (1) {
         uint8_t v = *(volatile uint8_t *)&bucket->lock & ~((uint8_t)1);
         uint8_t new_v = v + (uint8_t)2;
         if (__sync_bool_compare_and_swap((volatile uint8_t *)&bucket->lock, v, new_v))
@@ -190,8 +188,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len, 
     int64_t item_offset;
 
     item_offset = segmentToSet->AllocItem(new_item_size);
-    if (item_offset == -1)
-    {
+    /* if (item_offset == -1) {
         unlock_two_buckets(bucket, tb);
 #ifdef EXP_LATENCY
         auto end = std::chrono::steady_clock::now();
@@ -206,8 +203,8 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len, 
 #endif
         segmentToSet->table_stats_->set_fail += 1;
         return BATCH_FULL;
-    }
-    else if (item_offset == -2)
+    } else */
+    if (item_offset == -2)
     {
         unlock_two_buckets(bucket, tb);
 #ifdef EXP_LATENCY
@@ -224,8 +221,8 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len, 
         segmentToSet->table_stats_->set_fail += 1;
         return BATCH_TOO_SMALL;
     }
-    uint32_t block_id = segmentToSet->log_blocks_[segmentToSet->usingblock_]->block_id;
-
+    // uint32_t block_id = segmentToSet->log_blocks_[segmentToSet->usingblock_]->block_id;
+    uint32_t block_id = segmentToSet->get_block_id(segmentToSet->usingblock_);
     LogItem *new_item = (LogItem *)segmentToSet->locateItem(block_id, item_offset);
     segmentToSet->table_stats_->set_success += 1;
 

@@ -9,8 +9,6 @@
 #include "log.hpp"
 
 
-extern MemPool *kMemPool;
-
 class Piekv
 {
 private:

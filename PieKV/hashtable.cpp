@@ -68,8 +68,8 @@ void HashTable::ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 
 		this->redistribute_last_short_group(parts, count);
     memset(parts, 0, sizeof(size_t) * (round_hash_->S_ << 1));
-    tableblocksToMove[i]->block_id = table_blocks_[table_block_num_]->block_id;
-    tableblocksToMove[i]->block_ptr = table_blocks_[table_block_num_]->block_ptr;
+    tableblocksToMove[i]->block_id = get_block_id(table_block_num_);
+    tableblocksToMove[i]->block_ptr = get_block_ptr(table_block_num_);
     table_block_num_ -= 1;
 
 		while (1) {

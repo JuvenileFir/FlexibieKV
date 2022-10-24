@@ -140,7 +140,6 @@ void LogSegment::get_log(uint8_t *out_value, uint32_t *in_out_value_length, cons
     table_stats_->get_found += 1;
 }
 
-
 int64_t LogSegment::set_log(uint64_t key_hash, const uint8_t *key, uint32_t key_length, const uint8_t *value,uint32_t value_length, uint32_t expire_time)
 {
     
@@ -197,6 +196,9 @@ int64_t LogSegment::set_log(uint64_t key_hash, const uint8_t *key, uint32_t key_
     return block_id;
 }
 
+uint32_t LogSegment::get_block_id(uint32_t log_index) {
+    return log_blocks_[log_index]->block_id;
+}
 
 void LogSegment::set_item(struct LogItem *item, uint64_t key_hash, const uint8_t *key, uint32_t key_length, const uint8_t *value,uint32_t value_length, uint32_t expire_time) 
 {
@@ -224,22 +226,30 @@ int64_t LogSegment::AllocItem(uint64_t item_size) {
         if (log_blocks_[usingblock_]->residue < item_size) {
             // block in use is already filled up 
             // check if there is free block left
+            offset_ = 0;
             if (usingblock_ < blocknum_ - 1) {
                 // use next block
                 usingblock_++;
-                offset_ = 0;
-            }
-            else {
+                printf("usingblock_:%d\n",usingblock_);//???==1???
+            } else {
                 // no free block left
+                /* usingblock_ = 0;
+                round_++;
+                printf("round:%d\n",round_); */
                 return -1;
             }
         }
         item_offset = offset_;
         offset_ += item_size;
-        log_blocks_[usingblock_]->residue -= item_size;
+        uint32_t& r = log_blocks_[usingblock_]->residue;
+        if (round_) {
+            if (offset_ > r) r = offset_;
+        } else {
+            r -= item_size;
+        }
         return item_offset;
-    }
-    else {
+        
+    } else {
         // TODO: implement a function `big_set`
         return -2;  // batch_too_small
     }

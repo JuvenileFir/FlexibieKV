@@ -48,7 +48,7 @@ private:
     /* hash table data */
 public:
     TableBlock *table_blocks_[MAX_BLOCK_NUM - 1];//
-    TableStats table_stats_;
+    // TableStats table_stats_;
     RoundHash *round_hash_;
     uint32_t table_block_num_;//combine "hash_table.num_partitions" & "PartitionMap.numOfpartitions"
     uint32_t is_setting_;
