@@ -41,7 +41,7 @@ void addSignal(Signal& sigset, Args... args) {
 
 void port_init() {
   unsigned nb_ports;
-
+  printf("enter the port\n");
   /* Initialize the Environment Abstraction Layer (EAL). */
   int t_argc = 8;
   char *t_argv[] = {(char *)"./build/benchmark",
@@ -51,7 +51,7 @@ void port_init() {
                     (char *)"1",
                     (char *)"--huge-unlink",
                     (char *)"-w",
-                    (char *)"pci@0000:03:00.1"};
+                    (char *)"pci@0000:17:00.1"};
   
   int ret = rte_eal_init(t_argc, t_argv);
 

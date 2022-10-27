@@ -796,7 +796,7 @@ extern "C" void port_init() {
                     (char *)"1",
                     (char *)"--huge-unlink",
                     (char *)"-w",
-                    (char *)"pci@0000:03:00.1"};
+                    (char *)"pci@0000:17:00.1"};
   int ret = rte_eal_init(t_argc, t_argv);
   if (ret < 0) rte_exit(EXIT_FAILURE, "Error with EAL initialization\n");
 

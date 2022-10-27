@@ -1,0 +1,2 @@
+/usr/bin/ar qc libperf_count.a  CMakeFiles/perf_count.dir/perf_count.c.o
+/usr/bin/ranlib libperf_count.a

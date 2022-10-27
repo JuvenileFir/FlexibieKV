@@ -1,6 +1,5 @@
 #include "piekv.hpp"
 
-
 MemPool *kMemPool;
 
 Piekv::Piekv(int init_log_block_number, int init_block_size, int init_mem_block_number){
@@ -52,7 +51,7 @@ bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key, size_t key_l
         uint64_t item_offset = ITEM_OFFSET(item_vec);
         segmentToGet->get_log(out_value,in_out_value_length,block_id,item_offset);
         if (!is_snapshots_same(*ts1, read_two_buckets_end(bucket, *tb))) continue;
-
+        segmentToGet->table_stats_->get_found += 1;
         break;
     }
     #ifdef EXP_LATENCY
@@ -159,7 +158,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
 #endif
 #endif
         segmentToSet->table_stats_->set_fail += 1;
-        return FAILURE_HASHTABLE_FULL;
+        return false;//return FAILURE_HASHTABLE_FULL;
     }
     if (tp.cuckoostatus == failure_key_duplicated)
     {
@@ -178,11 +177,10 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
 #endif
 #endif
         segmentToSet->table_stats_->set_fail += 1;
-        return FAILURE_ALREADY_EXIST;
+        return false;//return FAILURE_ALREADY_EXIST;
     }
     assert(tp.cuckoostatus == ok);
     struct Bucket *located_bucket = &bucket[tp.bucket];
-
 
     uint64_t new_item_size = (uint32_t)(sizeof(LogItem) + ROUNDUP8(key_len) + ROUNDUP8(val_len));
     int64_t item_offset;
@@ -202,7 +200,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
 #endif
 #endif
         segmentToSet->table_stats_->set_fail += 1;
-        return BATCH_FULL;
+        return false;//return BATCH_FULL;
     } else */
     if (item_offset == -2)
     {
@@ -219,7 +217,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
 #endif
 #endif
         segmentToSet->table_stats_->set_fail += 1;
-        return BATCH_TOO_SMALL;
+        return false;//return BATCH_TOO_SMALL;
     }
     // uint32_t block_id = segmentToSet->log_blocks_[segmentToSet->usingblock_]->block_id;
     uint32_t block_id = segmentToSet->get_block_id(segmentToSet->usingblock_);
@@ -248,7 +246,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     printf("SET(succ): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
 #endif
 #endif
-    return SUCCESS_SET;
+    return true;
 }
 
 
