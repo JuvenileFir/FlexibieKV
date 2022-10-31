@@ -39,8 +39,9 @@ const uint32_t kResCounterLen = 8;
 #define SET_FAIL 0x23
 #define GET_SUCC 0x12
 #define GET_FAIL 0x22
+#define GET_THREAD 0x2f
 
-#define NUM_QUEUE THREAD_NUM
+// #define THREAD_NUM THREAD_NUM
 #define RX_RING_SIZE 1024
 #define TX_RING_SIZE 1024
 
@@ -168,13 +169,6 @@ public:
 
     void send_packet();
 };
-
-
-
-
-
-
-
 
 
 #endif

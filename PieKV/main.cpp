@@ -3,7 +3,7 @@
 #include <atomic>
 #include <future>
 
-struct rte_mempool *kRecv_mbuf_pool[NUM_QUEUE];
+struct rte_mempool *kRecv_mbuf_pool[THREAD_NUM];
 struct rte_mempool *send_mbuf_pool;
 
 typedef struct context_s {
@@ -51,7 +51,7 @@ void port_init() {
                     (char *)"1",
                     (char *)"--huge-unlink",
                     (char *)"-w",
-                    (char *)"pci@0000:17:00.1"};
+                    (char *)"pci@0000:03:00.1"};
   
   int ret = rte_eal_init(t_argc, t_argv);
 
@@ -62,7 +62,7 @@ void port_init() {
 
   /* Creates a new mempool in memory to hold the mbufs. */
   char str[15];
-  for (uint32_t i = 0; i < NUM_QUEUE; i++) {
+  for (uint32_t i = 0; i < THREAD_NUM; i++) {
     sprintf(str, "RX_POOL_%d", i);
     kRecv_mbuf_pool[i] = rte_pktmbuf_pool_create(str, NUM_MBUFS * nb_ports, MBUF_CACHE_SIZE, 0,
                                                 RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
@@ -73,7 +73,7 @@ void port_init() {
   if (send_mbuf_pool == NULL) rte_exit(EXIT_FAILURE, "Cannot create mbuf pool\n");
 
   /* Initialize all ports. */
-  const uint16_t rx_rings = NUM_QUEUE, tx_rings = NUM_QUEUE;
+  const uint16_t rx_rings = THREAD_NUM, tx_rings = THREAD_NUM;
   uint16_t nb_rxd = RX_RING_SIZE;
   uint16_t nb_txd = TX_RING_SIZE;
   uint16_t q;
@@ -127,6 +127,8 @@ void print_piekv()
 {
   printf("piekv run: %d",m_piekv->is_running_);
 }
+
+
 
 int main(int argc, char *argv[]){
     int ch;
@@ -214,6 +216,7 @@ int main(int argc, char *argv[]){
 
     printf(" == [STAT] Workers Start (%d threads in total) == \n", THREAD_NUM);
     size_t id;
+    // GetThread();
     for (id = 0; id < THREAD_NUM; id++) {
 
             m_rtworkers[id] = new RTWorker(m_piekv, id, send_mbuf_pool);

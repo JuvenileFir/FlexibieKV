@@ -170,8 +170,8 @@ void RTWorker::complement_pkt(struct rte_mbuf *pkt, uint8_t *ptr, int pktlen)
     ip_hdr->hdr_checksum = rte_ipv4_cksum(ip_hdr);
 
     udph = (struct rte_udp_hdr *)((char *)ip_hdr + sizeof(struct rte_ipv4_hdr));
-    udph->src_port = rand();
-    udph->dst_port = rand();
+    udph->src_port = 0;
+    udph->dst_port = 3;
     // bwb: ↓ ↓ ↓ client tx_loop中在初始化阶段即可执行
     udph->dgram_len =
         rte_cpu_to_be_16((uint16_t)(pktlen - sizeof(struct rte_ether_hdr) - sizeof(struct rte_ipv4_hdr)));
@@ -206,11 +206,11 @@ bool RTWorker::pkt_filter(const struct rte_mbuf *pkt)
 
 void RTWorker::worker_proc()
 {
-    bool ret;
+    bool ret, flag = false;
     uint64_t key_hash;
     uint32_t key_len, key_hash_len, val_len;
 
-    tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + kEIUHeaderLen;
+    tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + kEIUHeaderLen + kResCounterLen;
     while (piekv_->is_running_)
     {
         nb_rx = rte_eth_rx_burst(port, t_id_, rx_buf, BURST_SIZE);
@@ -256,11 +256,14 @@ void RTWorker::worker_proc()
                 } else if (*(uint16_t *)ptr == MEGA_JOB_SET) {
                     parse_set();
                 } else if (*(uint16_t *)ptr == MEGA_JOB_THREAD) {
-                    printf("收到thread\n");
+                    printf("rx thread\tt_id:%ld\n",t_id_);
+                    *(uint16_t *)tx_ptr = GET_THREAD;
+                    tx_ptr += SET_RESPOND_LEN;
                     *(uint16_t *)tx_ptr = THREAD_NUM;
                     tx_ptr += 2;
-                    pktlen += 2;
+                    pktlen += 4;
                     ptr += 2;//rxset_packet四值相加
+                    flag = true;
                 } else {
                     rte_pktmbuf_dump(stdout, rx_buf[i], rx_buf[i]->pkt_len);
                     break;
@@ -275,6 +278,11 @@ void RTWorker::worker_proc()
                     check_pkt_end(tx_bufs_pt[k]);
                 }
                 nb_tx = rte_eth_tx_burst(port, t_id_, tx_bufs_pt, pkt_id);
+                if(flag) {
+                    printf("tx thread\n");
+                    flag = false;
+                }
+
                 core_statistics[core_id].tx += nb_tx;
                 pkt_id = 0;
                 pktlen = kEIUHeaderLen;
@@ -287,5 +295,5 @@ void RTWorker::worker_proc()
         }
     }
 
-    printf("%ld\n", t_id_);
+    printf("t_id:%ld\n", t_id_);
 }
