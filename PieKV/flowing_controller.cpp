@@ -107,12 +107,13 @@ bool Piekv::H2L(size_t blocknum_to_move)
             hashtable_->table_block_num_);
 
 
-    TableBlock **tableblocksToMove = (TableBlock **)malloc(blocknum_to_move * sizeof(TableBlock));
+    TableBlock **tableblocksToMove = (TableBlock **)malloc(blocknum_to_move * sizeof(TableBlock *));
+    for (int i = 0; i < blocknum_to_move; i++) {
+        tableblocksToMove[i] = (TableBlock *)malloc(sizeof(TableBlock));
+    }
     hashtable_->ShrinkTable(tableblocksToMove, blocknum_to_move);
-
     // Append page(s) to SlabStore in round robin.
     log_->Expand(tableblocksToMove,blocknum_to_move,4*64);   //  TODO: flexible log item size here
-
     return true;
 }
 

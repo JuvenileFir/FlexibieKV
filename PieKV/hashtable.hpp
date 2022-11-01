@@ -55,6 +55,7 @@ public:
     uint32_t table_block_num_;//combine "hash_table.num_partitions" & "PartitionMap.numOfpartitions"
     uint32_t is_setting_;
     uint32_t is_flexibling_;
+    uint32_t is_swapping;
     uint32_t current_version_;
     MemPool *mempool_;
     

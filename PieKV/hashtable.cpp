@@ -7,6 +7,7 @@
 HashTable::HashTable(MemPool* mempool) {
 	is_setting_ = 0;
 	is_flexibling_ = 0;
+  is_swapping = 0;
 	current_version_ = 0;
   mempool_ = mempool;
 	table_block_num_ = mempool->get_block_available_num();
@@ -60,7 +61,6 @@ void HashTable::ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 		round_hash_->get_parts_to_remove(parts, &count);// get all parts to move
 		// round_hash_->DelBucket();
     remap_new_groups();
-
 		while (1) {
 			if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_setting_), 0U, 1U))
 				break;
@@ -68,13 +68,11 @@ void HashTable::ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 		*(volatile uint32_t *)&(is_flexibling_) = 1U;
     swap_group_maps();
 		__sync_fetch_and_sub((volatile uint32_t *)&(is_setting_), 1U);
-
 		this->redistribute_last_short_group(parts, count);
     memset(parts, 0, sizeof(size_t) * (round_hash_->S_ << 1));
+    table_block_num_ -= 1;
     tableblocksToMove[i]->block_id = table_blocks_[table_block_num_]->block_id;
     tableblocksToMove[i]->block_ptr = table_blocks_[table_block_num_]->block_ptr;
-    table_block_num_ -= 1;
-
 		while (1) {
 			if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_setting_), 0U, 1U))
 				break;
@@ -416,7 +414,7 @@ void HashTable::swap_group_maps()
 
   while (1) {
     // use flexibling temp, should change it to a new lock
-    if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_flexibling_), 0U, 1U))
+    if (__sync_bool_compare_and_swap((volatile uint32_t *)&(is_swapping), 0U, 1U))
       break;
 	}
   
@@ -424,5 +422,5 @@ void HashTable::swap_group_maps()
   round_hash_ = round_hash_new_;
   round_hash_new_ = temp;
 
-  __sync_fetch_and_sub((volatile uint32_t *)&(is_flexibling_), 1U);
+  __sync_fetch_and_sub((volatile uint32_t *)&(is_swapping), 1U);
 }

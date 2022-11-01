@@ -49,8 +49,9 @@ public:
     uint32_t usingblock_;
     uint32_t offset_;
     uint32_t round_;
+    MemPool *mempool_;
 
-    LogSegment(/* args */);
+    LogSegment(MemPool *mempool);
     ~LogSegment();
 
     
@@ -77,7 +78,7 @@ public:
     LogSegment *log_segments_[THREAD_NUM];
     uint64_t total_blocknum_;
     uint16_t total_segmentnum_;
-
+    MemPool *mempool_;
 
     Log(MemPool *mempool, uint64_t init_block_number);
     ~Log();

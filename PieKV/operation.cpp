@@ -192,7 +192,6 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len, 
 
     uint64_t new_item_size = (uint32_t)(sizeof(LogItem) + ROUNDUP8(key_len) + ROUNDUP8(val_len));
     int64_t item_offset;
-
     item_offset = segmentToSet->AllocItem(new_item_size);
     if (item_offset == -1)
     {
@@ -237,6 +236,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len, 
     segmentToSet->store_stats_->actual_used_mem += new_item_size;
 #endif
     new_item->item_size = new_item_size;
+
     segmentToSet->set_item(new_item, key_hash, key, (uint32_t)key_len, val, (uint32_t)val_len, VALID);
     
     located_bucket->item_vec[tp.slot] = ITEM_VEC(tag, block_id, item_offset);

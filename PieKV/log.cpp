@@ -1,8 +1,9 @@
 #include "log.hpp"
 
 
-LogSegment::LogSegment(/* args */)
+LogSegment::LogSegment(MemPool *mempool)
 {
+    mempool_ = mempool;
     for (int i = 0; i < BLOCK_MAX_NUM; i++) {
         log_blocks_[i] = new LogBlock;
     }
@@ -27,11 +28,12 @@ LogSegment::~LogSegment()
 
 Log::Log(MemPool *mempool, uint64_t init_block_number)
 {
+    mempool_ = mempool;
     total_segmentnum_ = THREAD_NUM;
     resizing_pointer_ = 0;
 
     for (int i = 0; i < total_segmentnum_; i++) {
-        log_segments_[i] = new LogSegment();
+        log_segments_[i] = new LogSegment(mempool);
     }
 
     for (int i = 0; i < init_block_number; i++) {
@@ -72,8 +74,11 @@ void Log::Expand(TableBlock **tableblocksToMove, uint64_t numBlockToExpand, size
         segmentToResize->log_blocks_[blockNum]->block_ptr = (uint8_t *)(tableblocksToMove[i]->block_ptr);
         segmentToResize->log_blocks_[blockNum]->block_id = tableblocksToMove[i]->block_id;
         segmentToResize->log_blocks_[blockNum]->residue = blockSize;
-        // TODO: sync add here
 
+        __sync_fetch_and_add((uint32_t *)&(segmentToResize->blocknum_), 1U);
+        __sync_fetch_and_add((uint64_t *)&(total_blocknum_), 1U);
+
+        set_next_resize_segment_id(0);
     }
 }
 
@@ -95,7 +100,7 @@ void Log::Shrink(TableBlock **tableblocksToMove, uint64_t numBlockToShrink)
         else {
             numBlockToShrink++;         //  try to find next usable segment
         }
-        set_next_resize_segment_id(segmentId);
+        set_next_resize_segment_id(1);
     }
 
 
@@ -212,7 +217,8 @@ void LogSegment::set_item(struct LogItem *item, uint64_t key_hash, const uint8_t
 
 LogItem *LogSegment::locateItem(const uint32_t block_id, uint64_t log_offset)
 {
-    return (LogItem *)(log_blocks_[block_id]->block_ptr + log_offset);
+    return mempool_->locate_item(block_id, log_offset);
+    // return (LogItem *)(log_blocks_[block_id]->block_ptr + log_offset);
 }
 
 int64_t LogSegment::AllocItem(uint64_t item_size) {
