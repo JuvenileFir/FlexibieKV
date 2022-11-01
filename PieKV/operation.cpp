@@ -7,7 +7,7 @@ Piekv::Piekv(int init_log_block_number, int init_block_size, int init_mem_block_
     is_running_ = 1;
     stop_entry_gc_ = 0;
 
-    kMemPool = new MemPool(init_block_size, init_mem_block_number);
+    kMemPool = new MemPool(init_block_size, init_mem_block_number);  // TODO: move this line to main function later, it shouldn't be here
     mempool_ = kMemPool;
     log_ = new Log(mempool_, init_log_block_number);
     hashtable_ = new HashTable(mempool_);
