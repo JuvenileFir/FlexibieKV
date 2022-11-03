@@ -38,3 +38,6 @@ PieKV/build/*
 PieKV/CMakeFiles
 PieKV/CMakeCache.txt
 PieKV/cmake_install.cmake
+
+
+FlexibleKV_previous_version/build

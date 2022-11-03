@@ -139,7 +139,7 @@ void RTWorker::parse_get()
 }
 
 void RTWorker::complement_pkt(struct rte_mbuf *pkt, uint8_t *ptr, int pktlen)
-{   
+{
     uint16_t *counter = (uint16_t *)((uint8_t *)rte_pktmbuf_mtod(pkt, uint8_t *) + kEIUHeaderLen);
     // bwb: ↑ ↑ ↑ 不使用传进来的参数指针，而是重新定位data头指针赋值counter
     *counter = rt_counter_.get_succ;
@@ -156,6 +156,7 @@ void RTWorker::complement_pkt(struct rte_mbuf *pkt, uint8_t *ptr, int pktlen)
 
     pktlen += kEndMarkLen;
     *(uint16_t *)ptr = MEGA_PKT_END;
+
     while (pktlen < kMinFrameLen)
     {
         ptr += kEndMarkLen;
@@ -176,17 +177,17 @@ void RTWorker::complement_pkt(struct rte_mbuf *pkt, uint8_t *ptr, int pktlen)
     udph->dgram_len =
         rte_cpu_to_be_16((uint16_t)(pktlen - sizeof(struct rte_ether_hdr) - sizeof(struct rte_ipv4_hdr)));
     udph->dgram_cksum = rte_ipv4_udptcp_cksum(ip_hdr, udph);
+    
 }
 
 void RTWorker::check_pkt_end(struct rte_mbuf *pkt)
 {
     int pkt_len = pkt->data_len;//太小了，远远不足1500
-    // printf("pkt:%d\n",pkt_len);
 
     uint16_t *ptr = (uint16_t *)((uint8_t *)rte_pktmbuf_mtod(pkt, uint8_t *) + (pkt_len - 2));
-    assert(*ptr == MEGA_PKT_END);
-/*  if (*ptr != MEGA_PKT_END)
-        printf("end:%d\n",*ptr); */
+    // assert(*ptr == MEGA_PKT_END);
+    if (*ptr != MEGA_PKT_END)
+        printf("end:%d\n",*ptr);
 }
 
 bool RTWorker::pkt_filter(const struct rte_mbuf *pkt)
@@ -210,7 +211,8 @@ void RTWorker::worker_proc()
     uint64_t key_hash;
     uint32_t key_len, key_hash_len, val_len;
 
-    tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + kEIUHeaderLen + kResCounterLen;
+    tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + kEIUHeaderLen + kResCounterLen; //  + kResCounterLen
+    pktlen = kEIUHeaderLen + kResCounterLen;
     while (piekv_->is_running_)
     {
         nb_rx = rte_eth_rx_burst(port, t_id_, rx_buf, BURST_SIZE);
@@ -271,7 +273,7 @@ void RTWorker::worker_proc()
             }
 
             if (pktlen != kEIUHeaderLen || pkt_id != 0) {
-
+                
                 complement_pkt(tx_bufs_pt[pkt_id], tx_ptr, pktlen);
                 pkt_id++;
                 for (int k = 0; k < pkt_id; k++) {
