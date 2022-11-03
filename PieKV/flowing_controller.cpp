@@ -48,11 +48,21 @@ void Piekv::memFlowingController()
     
         vaild_percentage = store_load * factor / store_capa;
         load_factor = index_load * factor / index_capa;
+
+        int total_block_num = log_->total_blocknum_ + hashtable_->table_block_num_;
+        double total_mem_utilization = 
+            vaild_percentage * (log_->total_blocknum_ / total_block_num) 
+                + load_factor * (hashtable_->table_block_num_ / total_block_num);
+
         //Index less & Store more
         if (load_factor < threshold_hashtable && vaild_percentage >= threshold_log) {
-            printf("[STATUS] store load: %d  store capa: %d\n",store_load,store_capa);
-            printf("[STATUS] index load: %d  index capa: %d\n",index_load,index_capa);
-            printf("[STATUS] load_factor: %f  valid_percentage: %f\n",load_factor,vaild_percentage);
+            // printf("[STATUS] store load: %d  store capa: %d\n",store_load,store_capa);
+            // printf("[STATUS] index load: %d  index capa: %d\n",index_load,index_capa);
+            // printf("[STATUS] load_factor: %f  valid_percentage: %f\n",load_factor,vaild_percentage);
+            printf("[STATUS] Log   Memory utilization: %d / %d = %f %\n", store_load, store_capa, vaild_percentage);
+            printf("[STATUS] Index Memory utilization: %d / %d = %f %\n", index_load, index_capa, load_factor);
+            printf("[STATUS] Total Memory utilization: %f\n", total_mem_utilization);
+            
             PRINT_EXCECUTION_TIME("  === [STAT] H2L is executed by Daemon === ", H2L(1));
             #ifdef MULTIPLE_SHIFT
                 int segment_num = table->num_partitions;
@@ -70,9 +80,13 @@ void Piekv::memFlowingController()
             /* --------------------------------------------------------------------- */
             //Index more & Store less
         } else if (load_factor >= threshold_hashtable && vaild_percentage < threshold_log) {
-            printf("[STATUS] store load: %d  store capa: %d\n",store_load,store_capa);
-            printf("[STATUS] index load: %d  index capa: %d\n",index_load,index_capa);
-            printf("[STATUS] load_factor: %f  valid_percentage: %f\n",load_factor,vaild_percentage);
+            // printf("[STATUS] store load: %d  store capa: %d\n",store_load,store_capa);
+            // printf("[STATUS] index load: %d  index capa: %d\n",index_load,index_capa);
+            // printf("[STATUS] load_factor: %f  valid_percentage: %f\n",load_factor,vaild_percentage);
+            printf("[STATUS] Log   Memory utilization: %d / %d = %f %\n", store_load, store_capa, vaild_percentage);
+            printf("[STATUS] Index Memory utilization: %d / %d = %f %\n", index_load, index_capa, load_factor);
+            printf("[STATUS] Total Memory utilization: %f\n", total_mem_utilization);
+            
             PRINT_EXCECUTION_TIME("  === [STAT] L2H is executed by Daemon === ", L2H(1));
             #ifdef MULTIPLE_SHIFT
                 int segment_num = table->num_partitions;
@@ -107,12 +121,13 @@ bool Piekv::H2L(size_t blocknum_to_move)
             hashtable_->table_block_num_);
 
 
-    TableBlock **tableblocksToMove = (TableBlock **)malloc(blocknum_to_move * sizeof(TableBlock));
+    TableBlock **tableblocksToMove = (TableBlock **)malloc(blocknum_to_move * sizeof(TableBlock *));
+    for (int i = 0; i < blocknum_to_move; i++) {
+        tableblocksToMove[i] = (TableBlock *)malloc(sizeof(TableBlock));
+    }
     hashtable_->ShrinkTable(tableblocksToMove, blocknum_to_move);
-
     // Append page(s) to SlabStore in round robin.
     log_->Expand(tableblocksToMove,blocknum_to_move,4*64);   //  TODO: flexible log item size here
-
     return true;
 }
 

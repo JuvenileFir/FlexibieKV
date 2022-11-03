@@ -12,12 +12,12 @@
 class Piekv
 {
 private:
-    HashTable *hashtable_;
-    uint32_t stop_entry_gc_;//used for stopping index entry gc when `move_h2t`???
-    MemPool *mempool_;
 
 
 public:
+    HashTable *hashtable_;
+    uint32_t stop_entry_gc_;//used for stopping index entry gc when `move_h2t`???
+    MemPool *mempool_;
     Log *log_;
 
     

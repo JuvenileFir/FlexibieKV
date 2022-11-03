@@ -18,7 +18,8 @@ MemPool::MemPool(size_t block_size, size_t block_num_to_init)
     printf("MEM: Initializing pages...\n");
 
     for (int i = 0; i < block_num_to_init; i++) {
-        void *ptr = mmap(NULL, block_size_, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
+        // void *ptr = mmap(NULL, block_size_, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
+        void *ptr = malloc(block_size_);
         if (ptr == MAP_FAILED) {
             printf("MEM: map failed.\n");
         }
