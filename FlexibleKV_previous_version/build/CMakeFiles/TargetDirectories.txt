@@ -1,0 +1,8 @@
+/home/bwb/PieKV/FlexibleKV_previous_version/build/CMakeFiles/rebuild_cache.dir
+/home/bwb/PieKV/FlexibleKV_previous_version/build/CMakeFiles/edit_cache.dir
+/home/bwb/PieKV/FlexibleKV_previous_version/build/CMakeFiles/microbench.dir
+/home/bwb/PieKV/FlexibleKV_previous_version/build/CMakeFiles/mem_flowing.dir
+/home/bwb/PieKV/FlexibleKV_previous_version/build/CMakeFiles/flexiblekv.dir
+/home/bwb/PieKV/FlexibleKV_previous_version/build/perf_count/CMakeFiles/rebuild_cache.dir
+/home/bwb/PieKV/FlexibleKV_previous_version/build/perf_count/CMakeFiles/edit_cache.dir
+/home/bwb/PieKV/FlexibleKV_previous_version/build/perf_count/CMakeFiles/perf_count.dir

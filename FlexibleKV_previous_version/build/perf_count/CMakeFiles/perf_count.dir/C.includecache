@@ -1,0 +1,32 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/bwb/PieKV/FlexibleKV_previous_version/perf_count/perf_count.c
+perf_count.h
+/home/bwb/PieKV/FlexibleKV_previous_version/perf_count/perf_count.h
+linux/perf_event.h
+-
+sys/types.h
+-
+sys/syscall.h
+-
+unistd.h
+-
+stdlib.h
+-
+stdio.h
+-
+string.h
+-
+
+/home/bwb/PieKV/FlexibleKV_previous_version/perf_count/perf_count.h
+stddef.h
+-
+stdint.h
+-
+

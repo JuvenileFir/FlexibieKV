@@ -1,12 +1,10 @@
 #pragma once
 
-#define _CUCKOO_
-
-#include "basic_hash.h"
-#include "util.h"
+#ifndef CUCKOO_H
+#define CUCKOO_H
 
 #include <math.h>
-
+#include "basic_hash.h"
 
 #define MAX_CUCKOO_COUNT 5602U
 // 2 * ((ITEMS_PER_BUCKET == 1)
@@ -113,3 +111,4 @@ struct bSlot slot_search(Bucket *partition, const uint32_t b1, const uint32_t b2
 
 Cbool cuckoopath_move(Bucket *partition, cuckooRecord *cuckoopath, int depth, twoBucket *tb);
 
+#endif

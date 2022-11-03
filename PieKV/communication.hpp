@@ -1,9 +1,7 @@
-
 #ifndef COMMUNICATION_HPP_
 #define COMMUNICATION_HPP_
 
 #include <cstdint>
-
 #include <rte_eal.h>
 #include <rte_ethdev.h>
 #include <rte_cycles.h>
@@ -12,8 +10,6 @@
 #include <rte_byteorder.h>
 #include <rte_ip.h>
 #include <rte_ether.h>
-
-
 #include "piekv.hpp"
 
 #define SET_THREAD_NUM 10
@@ -25,26 +21,27 @@
 #define MEGA_PKT_END 0xffff
 #define MEGA_JOB_GET 0x2
 #define MEGA_JOB_SET 0x3
+#define MEGA_JOB_THREAD 0x4
 // #define MEGA_JOB_DEL 0x4 // TODO: DEL is to be implemented
-#define MEGA_END_MARK_LEN 2U
-#define PROTOCOL_TYPE_LEN 2U
-#define PROTOCOL_KEYLEN_LEN 2U
-#define PROTOCOL_KEYHASHLEN_LEN 2U
-#define PROTOCOL_VALLEN_LEN 4U
-#define PROTOCOL_HEADER_LEN 8U
+const uint32_t kEndMarkLen = 2;
+const uint32_t kTypeLen = 2;
+const uint32_t kKeylenLen = 2;
+const uint32_t khashlenLen = 2;
+const uint32_t kVallenLen = 4;
+const uint32_t kHeaderLen = 8;
 
 #define GET_RESPOND_LEN 2U
-#define GET_MAX_RETURN_LEN 16U
 #define SET_RESPOND_LEN 2U
-#define SET_MAX_RETURN_LEN 2U
+const uint32_t kMaxSetReturn = 2;
 
-#define RESPOND_ALL_COUNTERS 8U
+const uint32_t kResCounterLen = 8;
 #define SET_SUCC 0x13
 #define SET_FAIL 0x23
 #define GET_SUCC 0x12
 #define GET_FAIL 0x22
+#define GET_THREAD 0x2f
 
-#define NUM_QUEUE THREAD_NUM
+// #define THREAD_NUM THREAD_NUM
 #define RX_RING_SIZE 1024
 #define TX_RING_SIZE 1024
 
@@ -68,10 +65,10 @@ static struct rte_ether_addr D_Addr = {{0x04, 0x3f, 0x72, 0xdc, 0x26, 0x25}};
 
 
 // 14(ethernet header) + 20(IP header) + 8(UDP header)
-#define EIU_HEADER_LEN 42
-#define ETHERNET_HEADER_LEN 14
-#define ETHERNET_MAX_FRAME_LEN 1514
-#define ETHERNET_MIN_FRAME_LEN 64
+const uint32_t kEIUHeaderLen = 42;
+const uint32_t kEthernetHeaderLen = 14;
+const uint32_t kMaxFrameLen = 1514;
+const uint32_t kMinFrameLen = 64;
 // IP pkt header
 #define IP_DEFTTL 64 /* from RFC 1340. */
 #define IP_VERSION 0x40
@@ -141,7 +138,8 @@ private:
     struct rte_mbuf *tx_bufs_pt[PKG_GEN_COUNT];
     struct rte_mbuf *rx_buf[BURST_SIZE];
    
-    int pktlen = EIU_HEADER_LEN, pkt_id = 0;
+    uint32_t pktlen = kEIUHeaderLen, pkt_id = 0;
+    uint32_t max_get_return = 64;
 
     RT_Counter rt_counter_;
 
@@ -171,13 +169,6 @@ public:
 
     void send_packet();
 };
-
-
-
-
-
-
-
 
 
 #endif

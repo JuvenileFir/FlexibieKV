@@ -3,7 +3,6 @@
 #include <cstdlib>
 
 #include "roundhash.hpp"
-// #include "mempool.hpp"
 #include "cuckoo.h"
 
 #define MAX_KEY_LENGTH 255
@@ -49,7 +48,7 @@ private:
     /* hash table data */
 public:
     TableBlock *table_blocks_[MAX_BLOCK_NUM - 1];//
-    TableStats table_stats_;
+    // TableStats table_stats_;
     RoundHash *round_hash_;
     RoundHash *round_hash_new_;   // new group map used in resizing
     uint32_t table_block_num_;//combine "hash_table.num_partitions" & "PartitionMap.numOfpartitions"
