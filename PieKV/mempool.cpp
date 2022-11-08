@@ -17,7 +17,7 @@ MemPool::MemPool(size_t block_size, size_t block_num_to_init)
     block_size_ = block_size;
     printf("MEM: Initializing pages...\n");
 
-    for (int i = 0; i < block_num_to_init; i++) {
+    for (size_t i = 0; i < block_num_to_init; i++) {
         // void *ptr = mmap(NULL, block_size_, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
         void *ptr = malloc(block_size_);
         if (ptr == MAP_FAILED) {
@@ -29,14 +29,14 @@ MemPool::MemPool(size_t block_size, size_t block_num_to_init)
         blocknum_++;
     }
     blocknum_in_use_ = 0;
-    printf("MEM:   initial allocation of %zu blocks\n", blocknum_);
+    printf("MEM:   initial allocation of %u blocks\n", blocknum_);
     printf("MEM:   sorting by virtual address\n");
     qsort(mem_blocks_, blocknum_, sizeof(MemBlock), mem_blocks_compare_vaddr);
 }
 
 MemPool::~MemPool()
 {
-    for (int i = 0; i < blocknum_; i++){
+    for (uint32_t i = 0; i < blocknum_; i++){
         free(mem_blocks_[i].ptr);
     }
     blocknum_ = 0;
@@ -45,7 +45,7 @@ MemPool::~MemPool()
 
 void MemPool::free_all_blocks()
 {
-    for (int i = 0; i < blocknum_; i++){
+    for (uint32_t i = 0; i < blocknum_; i++){
         free(mem_blocks_[i].ptr);
     }
     blocknum_ = 0;
@@ -103,5 +103,5 @@ uint32_t MemPool::get_block_available_num()
 
 LogItem *MemPool::locate_item(const uint32_t blockNumber, uint64_t logOffset)
 {
-    return (LogItem *)(get_block_ptr(blockNumber) + logOffset);
+    return (LogItem *)((uint8_t*)get_block_ptr(blockNumber) + logOffset);
 }

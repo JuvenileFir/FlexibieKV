@@ -59,9 +59,9 @@ void Piekv::memFlowingController()
             // printf("[STATUS] store load: %d  store capa: %d\n",store_load,store_capa);
             // printf("[STATUS] index load: %d  index capa: %d\n",index_load,index_capa);
             // printf("[STATUS] load_factor: %f  valid_percentage: %f\n",load_factor,vaild_percentage);
-            printf("[STATUS] Log   Memory utilization: %d / %d = %f %\n", store_load, store_capa, vaild_percentage);
-            printf("[STATUS] Index Memory utilization: %d / %d = %f %\n", index_load, index_capa, load_factor);
-            printf("[STATUS] Total Memory utilization: %f\n", total_mem_utilization);
+            printf("[STATUS] Log   Memory utilization: %ld / %ld = %f \n", store_load, store_capa, vaild_percentage);
+            printf("[STATUS] Index Memory utilization: %ld / %ld = %f \n", index_load, index_capa, load_factor);
+            printf("[STATUS] Total Memory utilization: %f \n", total_mem_utilization);
             
             PRINT_EXCECUTION_TIME("  === [STAT] H2L is executed by Daemon === ", H2L(1));
             #ifdef MULTIPLE_SHIFT
@@ -83,9 +83,9 @@ void Piekv::memFlowingController()
             // printf("[STATUS] store load: %d  store capa: %d\n",store_load,store_capa);
             // printf("[STATUS] index load: %d  index capa: %d\n",index_load,index_capa);
             // printf("[STATUS] load_factor: %f  valid_percentage: %f\n",load_factor,vaild_percentage);
-            printf("[STATUS] Log   Memory utilization: %d / %d = %f %\n", store_load, store_capa, vaild_percentage);
-            printf("[STATUS] Index Memory utilization: %d / %d = %f %\n", index_load, index_capa, load_factor);
-            printf("[STATUS] Total Memory utilization: %f\n", total_mem_utilization);
+            printf("[STATUS] Log   Memory utilization: %ld / %ld = %f \n", store_load, store_capa, vaild_percentage);
+            printf("[STATUS] Index Memory utilization: %ld / %ld = %f \n", index_load, index_capa, load_factor);
+            printf("[STATUS] Total Memory utilization: %f \n", total_mem_utilization);
             
             PRINT_EXCECUTION_TIME("  === [STAT] L2H is executed by Daemon === ", L2H(1));
             #ifdef MULTIPLE_SHIFT
@@ -122,7 +122,7 @@ bool Piekv::H2L(size_t blocknum_to_move)
 
 
     TableBlock **tableblocksToMove = (TableBlock **)malloc(blocknum_to_move * sizeof(TableBlock *));
-    for (int i = 0; i < blocknum_to_move; i++) {
+    for (size_t i = 0; i < blocknum_to_move; i++) {
         tableblocksToMove[i] = (TableBlock *)malloc(sizeof(TableBlock));
     }
     hashtable_->ShrinkTable(tableblocksToMove, blocknum_to_move);

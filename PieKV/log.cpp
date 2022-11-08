@@ -31,12 +31,13 @@ Log::Log(MemPool *mempool, uint64_t init_block_number)
     mempool_ = mempool;
     total_segmentnum_ = THREAD_NUM;
     resizing_pointer_ = 0;
+    mask_ = BLOCK_MAX_NUM * mempool->get_block_size() -1;
 
-    for (int i = 0; i < total_segmentnum_; i++) {
+    for (uint64_t i = 0; i < total_segmentnum_; i++) {
         log_segments_[i] = new LogSegment(mempool);
     }
 
-    for (int i = 0; i < init_block_number; i++) {
+    for (uint64_t i = 0; i < init_block_number; i++) {
         int new_block_id = mempool->alloc_block();
         if (new_block_id == -1) break;
 
@@ -66,7 +67,7 @@ expand log segemnt by `numBlockToExpand` blocks:
 */
 void Log::Expand(TableBlock **tableblocksToMove, uint64_t numBlockToExpand, size_t blockSize)
 {
-    for(int i = 0; i < numBlockToExpand; i++) {
+    for(uint64_t i = 0; i < numBlockToExpand; i++) {
         // first get the segment id to resize
         uint16_t segmentId = get_next_resize_segment_id(0);
         LogSegment *segmentToResize = log_segments_[segmentId];
@@ -76,7 +77,7 @@ void Log::Expand(TableBlock **tableblocksToMove, uint64_t numBlockToExpand, size
         segmentToResize->log_blocks_[blockNum]->residue = blockSize;
 
         __sync_fetch_and_add((uint32_t *)&(segmentToResize->blocknum_), 1U);
-        __sync_fetch_and_add((uint64_t *)&(total_blocknum_), 1U);
+        __sync_fetch_and_add((uint32_t *)&(total_blocknum_), 1U);
 
         set_next_resize_segment_id(0);
     }
@@ -84,7 +85,7 @@ void Log::Expand(TableBlock **tableblocksToMove, uint64_t numBlockToExpand, size
 
 void Log::Shrink(TableBlock **tableblocksToMove, uint64_t numBlockToShrink)
 {
-    for(int i = 0; i < numBlockToShrink; i++) {
+    for(uint64_t i = 0; i < numBlockToShrink; i++) {
         // first get the segment id to resize
         uint16_t segmentId = get_next_resize_segment_id(1);
         LogSegment *segmentToResize = log_segments_[segmentId];
@@ -92,7 +93,7 @@ void Log::Shrink(TableBlock **tableblocksToMove, uint64_t numBlockToShrink)
         // check if there is free block
         if(segmentToResize->blocknum_ > 1 && segmentToResize->usingblock_ < segmentToResize->blocknum_ - 1) {
             __sync_fetch_and_sub((uint32_t *)&(segmentToResize->blocknum_), 1U);
-            __sync_fetch_and_sub((uint16_t *)&(total_blocknum_), 1U);
+            __sync_fetch_and_sub((uint32_t *)&(total_blocknum_), 1U);
 
             tableblocksToMove[i]->block_id = segmentToResize->log_blocks_[segmentToResize->blocknum_]->block_id;
             tableblocksToMove[i]->block_ptr = segmentToResize->log_blocks_[segmentToResize->blocknum_]->block_ptr;
@@ -108,13 +109,13 @@ void Log::Shrink(TableBlock **tableblocksToMove, uint64_t numBlockToShrink)
 }
 
  // expand: 0  shrink: 1
-uint16_t Log::get_next_resize_segment_id(int expandOrShrink) 
-{
+uint16_t Log::get_next_resize_segment_id(int expandOrShrink) {
     if (expandOrShrink == 0) {
         return resizing_pointer_;
-    }
-    if (expandOrShrink == 1) {
+    }else if (expandOrShrink == 1) {
         return (resizing_pointer_ + total_segmentnum_ - 1) % total_segmentnum_;
+    } else {
+        return -1;
     }
 }
 
@@ -229,29 +230,32 @@ int64_t LogSegment::AllocItem(uint64_t item_size) {
 
     int64_t item_offset;
     if (item_size <= BATCH_SIZE) {
-        if (log_blocks_[usingblock_]->residue < item_size) {
+           if(log_blocks_[usingblock_]->residue < 100) printf("residue:%d\titem_size:%ld\n",log_blocks_[usingblock_]->residue,item_size);
+
+        if (log_blocks_[usingblock_]->residue < item_size) {//仅触发一次？
             // block in use is already filled up 
             // check if there is free block left
+                printf("usingblock_:%d\tblocknum_:%d\n",usingblock_,blocknum_);
+
             offset_ = 0;
             if (usingblock_ < blocknum_ - 1) {
                 // use next block
                 usingblock_++;
-                printf("usingblock_:%d\n",usingblock_);//???==1???
             } else {
                 // no free block left
-                /* usingblock_ = 0;
+                usingblock_ = 0;
                 round_++;
-                printf("round:%d\n",round_); */
-                return -1;
+                printf("round:%d\n",round_);
+                // return -1;
             }
         }
         item_offset = offset_;
         offset_ += item_size;
-        uint32_t& r = log_blocks_[usingblock_]->residue;
         if (round_) {
-            if (offset_ > r) r = offset_;
+            // if (offset_ > log_blocks_[usingblock_]->residue)
+            log_blocks_[usingblock_]->residue = std::max(offset_, log_blocks_[usingblock_]->residue);
         } else {
-            r -= item_size;
+            log_blocks_[usingblock_]->residue -= item_size;
         }
         return item_offset;
         
@@ -261,6 +265,9 @@ int64_t LogSegment::AllocItem(uint64_t item_size) {
     }
 }
 
+uint64_t LogSegment::get_tail() {
+    return usingblock_ * mempool_->get_block_size() + offset_;
+}
 
 void LogSegment::print_table_stats() {
   printf("count:                  %10zu\n", table_stats_->count);

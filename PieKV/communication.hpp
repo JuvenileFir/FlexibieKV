@@ -1,3 +1,4 @@
+#pragma once
 #ifndef COMMUNICATION_HPP_
 #define COMMUNICATION_HPP_
 
@@ -54,9 +55,6 @@ const uint32_t kResCounterLen = 8;
 // static struct rte_ether_addr S_Addr = {{0x98, 0x03, 0x9b, 0x8f, 0xb0, 0x11}};//{0x98, 0x03, 0x9b, 0x8f, 0xb1, 0xc9}
 // static struct rte_ether_addr D_Addr = {{0x98, 0x03, 0x9b, 0x8f, 0xb5, 0xc0}};//{0x04, 0x3f, 0x72, 0xdc, 0x26, 0x24}
 
-static struct rte_ether_addr S_Addr = {{0x98, 0x03, 0x9b, 0x8f, 0xb1, 0xc9}};
-static struct rte_ether_addr D_Addr = {{0x04, 0x3f, 0x72, 0xdc, 0x26, 0x25}};
-
 // #define IP_SRC_ADDR ((192U << 24) | (168U << 16) | (1U << 8) | 101U)
 // #define IP_DST_ADDR ((192U << 24) | (168U << 16) | (1U << 8) | 103U)
 
@@ -78,7 +76,7 @@ const uint32_t kMinFrameLen = 64;
 
 #define NUM_MAX_CORE 36
 // const size_t page_size = 1048576 * 2;  // page size = 2 MiB
-const size_t kblock_size = 2097152UL;
+
 const size_t num_mem_blocks = 240;   // SHM_MAX_PAGES;
 
 struct benchmark_core_statistics {

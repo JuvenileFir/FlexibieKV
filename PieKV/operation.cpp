@@ -1,6 +1,7 @@
 #include "piekv.hpp"
 
 MemPool *kMemPool;
+bool allow_mutation = false;
 
 Piekv::Piekv(int init_log_block_number, int init_block_size, int init_mem_block_number){
     is_running_ = 1;
@@ -20,38 +21,55 @@ Piekv::~Piekv()
     delete kMemPool;
 }
 
-bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key, size_t key_length, uint8_t *out_value, uint32_t *in_out_value_length)
-{
+bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key,
+                size_t key_length, uint8_t *out_value,
+                uint32_t *in_out_value_length) {
 
     LogSegment *segmentToGet = log_->log_segments_[t_id];
    #ifdef EXP_LATENCY
     Cbool isTransitionPeriod = hashtable_->is_flexibling_;
     auto start = std::chrono::steady_clock::now();
     #endif
-
     uint32_t block_index = hashtable_->round_hash_->HashToBucket(key_hash);
     Bucket *bucket = (Bucket *)hashtable_->get_block_ptr(block_index);  
 
-    uint16_t tag = calc_tag(key_hash);
-    
     twoSnapshot *ts1 = (twoSnapshot *)malloc(sizeof(twoBucket));
     twoBucket *tb = (twoBucket *)malloc(sizeof(twoBucket));
     while (1) {
-        int64_t ret = hashtable_->get_table(ts1, tb, bucket, key_hash, key, key_length);
+        const Bucket* located_bucket;
+        int64_t ret = hashtable_->get_table(ts1, tb, bucket, key_hash, key,
+                                            key_length, &located_bucket);
         uint64_t item_vec;
         if (ret >= 0){
-            item_vec = (uint64_t)ret;
+            item_vec = located_bucket->item_vec[ret];
         } else if (ret == -2) {
             continue;
-        } else {
+        } else if (ret == -1) {
             segmentToGet->table_stats_->get_notfound += 1;
             return false;
         }
         uint32_t block_id = PAGE(item_vec);
         uint64_t item_offset = ITEM_OFFSET(item_vec);
-        segmentToGet->get_log(out_value,in_out_value_length,block_id,item_offset);
+        // segmentToGet->get_log(out_value,in_out_value_length,block_id,item_offset);
+
+        LogItem *item = segmentToGet->locateItem(block_id, item_offset);
+        
+        size_t key_length = 
+            std::min(ITEMKEY_LENGTH(item->kv_length_vec), (uint32_t)MAX_KEY_LENGTH);
+        size_t value_length = 
+            std::min(ITEMVALUE_LENGTH(item->kv_length_vec), (uint32_t)MAX_VALUE_LENGTH);
+
+        memcpy8(out_value, item->data + ROUNDUP8(key_length), value_length);
+        *in_out_value_length = value_length;
+        
         if (!is_snapshots_same(*ts1, read_two_buckets_end(bucket, *tb))) continue;
         segmentToGet->table_stats_->get_found += 1;
+        item_offset += block_id * mempool_->get_block_size();
+        if (allow_mutation)
+            this->move_to_head(bucket, (Bucket*)located_bucket,item, key_length,
+                               value_length, ret, item_vec,
+                               item_offset,segmentToGet);
+
         break;
     }
     #ifdef EXP_LATENCY
@@ -138,6 +156,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     }
 
     twoBucket tb = cal_two_buckets(key_hash);
+    lock_two_buckets(bucket, tb);
     tablePosition tp = cuckoo_insert(bucket, key_hash, tag, tb, key, key_len);
 
     // memory_barrier();
@@ -203,7 +222,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     } else */
     if (item_offset == -2)
     {
-        unlock_two_buckets(bucket, tb);
+        unlock_two_buckets(bucket, tb);//???lock two buckets在cuckoo insert中
 #ifdef EXP_LATENCY
         auto end = std::chrono::steady_clock::now();
 #ifdef TRANSITION_ONLY
@@ -218,7 +237,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
         segmentToSet->table_stats_->set_fail += 1;
         return false;//return BATCH_TOO_SMALL;
     }
-    // uint32_t block_id = segmentToSet->log_blocks_[segmentToSet->usingblock_]->block_id;
+    // uint64_t new_tail = segmentToSet->get_tail();//仿照mica添加
     uint32_t block_id = segmentToSet->get_block_id(segmentToSet->usingblock_);
     LogItem *new_item = (LogItem *)segmentToSet->locateItem(block_id, item_offset);
     segmentToSet->table_stats_->set_success += 1;
@@ -235,6 +254,8 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     unlock_two_buckets(bucket, tb);
     log_->log_segments_[t_id]->table_stats_->count += 1;
 
+    //cleanup_bucket(item_offset,new_tail); TODO!
+
 #ifdef EXP_LATENCY
     auto end = std::chrono::steady_clock::now();
 #ifdef TRANSITION_ONLY
@@ -249,8 +270,57 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     return true;
 }
 
+void Piekv::move_to_head(Bucket* bucket, Bucket* located_bucket,
+                         const LogItem* item, size_t key_length,
+                         size_t value_length, size_t item_index,
+                         uint64_t item_vec, uint64_t item_offset, 
+                         LogSegment *segmentToGet) {
+    uint64_t new_item_size = 
+        sizeof(LogItem) + ROUNDUP8(key_length) + ROUNDUP8(value_length);
+    uint64_t distance_from_tail = 
+        (segmentToGet->get_tail() - item_offset) & (log_->mask_);//tail <- set
+    if (distance_from_tail > mth_threshold_ +1 ) {
 
+    write_lock_bucket(bucket);
+    
+    // pool_->lock();//PieKV不锁pool
 
+    // check if the original item is still there
+    if (located_bucket->item_vec[item_index] == item_vec) {//仅验证
+ 
+        // uint64_t new_tail = segmentToGet->get_tail();
+        uint64_t new_item_offset = (uint64_t)segmentToGet->AllocItem(new_item_size);
+
+        if (item_offset < BLOCK_MAX_NUM * kblock_size) {
+            uint32_t block_id = segmentToGet->get_block_id(segmentToGet->usingblock_);
+            LogItem *new_item = (LogItem *)segmentToGet->locateItem(block_id, new_item_offset);
+            memcpy8((uint8_t*)new_item, (const uint8_t*)item, new_item_size);
+    
+            located_bucket->item_vec[item_index] = ITEM_VEC(TAG(item_vec), block_id, new_item_offset);
+
+            // success
+            segmentToGet->table_stats_->move_to_head_performed++;
+        } else {
+            // failed -- original data become invalid in the pool
+            segmentToGet->table_stats_->move_to_head_failed++;
+        }
+
+        // we need to hold the lock until we finish writing
+
+        write_unlock_bucket(bucket);
+
+        // cleanup_bucket(new_item_offset, new_tail);
+    } else {
+        //pool_->unlock();//PieKV不锁pool
+        write_unlock_bucket(bucket);
+
+        // failed -- original data become invalid in the table
+        segmentToGet->table_stats_->move_to_head_failed++;
+    }
+  } else {
+    segmentToGet->table_stats_->move_to_head_skipped++;
+  }
+}
 
 /*
 

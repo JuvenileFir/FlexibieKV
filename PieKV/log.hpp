@@ -59,7 +59,7 @@ public:
     int64_t AllocItem(uint64_t item_size);
     int64_t set_log(uint64_t key_hash, const uint8_t *key, uint32_t key_length, const uint8_t *value,uint32_t value_length, uint32_t expire_time);
     void get_log(uint8_t *out_value, uint32_t *in_out_value_length, const uint32_t block_id, uint64_t log_offset);
-
+    uint64_t get_tail();
     void print_table_stats();
 };
 
@@ -70,14 +70,13 @@ class Log
 private:
     uint16_t resizing_pointer_;
 
-
 public:
 
     LogSegment *log_segments_[THREAD_NUM];
-    uint64_t total_blocknum_;
+    uint32_t total_blocknum_;
     uint16_t total_segmentnum_;
     MemPool *mempool_;
-
+    uint64_t mask_;
     Log(MemPool *mempool, uint64_t init_block_number);
     ~Log();
 
