@@ -128,7 +128,7 @@ struct tablePosition cuckoo_insert(Bucket *partition, uint64_t keyhash, uint16_t
                                    const uint8_t *key, size_t keylength) {
   // tablePosition tpos;
   uint32_t res1, res2;
-  lock_two_buckets(partition, tb);
+  // lock_two_buckets(partition, tb);
   if (!try_find_insert_bucket(&partition[tb.b1], &res1, tag, key, keylength)) {
     return (tablePosition){tb.b1, res1, failure_key_duplicated};
   }
@@ -307,7 +307,8 @@ struct bSlot slot_search(Bucket *partition, const uint32_t b1, const uint32_t b2
         assert(!full(que));
         uint32_t alt_bucket_index = alt_bucket(x.bucket, TAG(b->item_vec[slot]));
         if (alt_bucket_index != b1 && alt_bucket_index != b2) {
-          bSlot y = {alt_bucket(x.bucket, TAG(b->item_vec[slot])), x.pathcode * ITEMS_PER_BUCKET + slot, x.depth + 1};
+          bSlot y = {alt_bucket(x.bucket, TAG(b->item_vec[slot])),
+                     (uint16_t)(x.pathcode * ITEMS_PER_BUCKET + slot), (int8_t)(x.depth + 1)};
           enqueue(&que, y);
         }
       }
