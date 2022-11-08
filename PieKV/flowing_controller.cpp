@@ -1,5 +1,36 @@
 #include "piekv.hpp"
 
+
+void Piekv::showUtilization()
+{
+    size_t store_load = 0;
+    size_t index_load = 0;
+    size_t store_capa, index_capa;
+    const double factor = 1.0;
+
+    double load_factor;
+    double vaild_percentage;
+
+    for (uint16_t i = 0; i < log_->total_segmentnum_; i++) {
+        LogSegment *segment_in_use = log_->log_segments_[i];
+        store_load += segment_in_use->store_stats_->actual_used_mem + segment_in_use->store_stats_->wasted;
+        index_load += segment_in_use->table_stats_->count;
+    }
+    store_capa = log_->total_blocknum_ * mempool_->get_block_size();
+    index_capa = hashtable_->table_block_num_ * BUCKETS_PER_PARTITION * ITEMS_PER_BUCKET;
+
+    vaild_percentage = store_load * factor / store_capa;
+    load_factor = index_load * factor / index_capa;
+
+    int total_block_num = log_->total_blocknum_ + hashtable_->table_block_num_;
+    double total_mem_utilization = 
+        vaild_percentage * (log_->total_blocknum_ / total_block_num) 
+            + load_factor * (hashtable_->table_block_num_ / total_block_num);
+    printf("[STATUS] Log   Memory utilization: %d / %d = %f %\n", store_load, store_capa, vaild_percentage);
+    printf("[STATUS] Index Memory utilization: %d / %d = %f %\n", index_load, index_capa, load_factor);
+    printf("[STATUS] Total Memory utilization: %f\n", total_mem_utilization);
+}
+
 void Piekv::memFlowingController()
 {
 

@@ -13,6 +13,7 @@ typedef struct context_s {
 
 std::vector<std::thread> workers;
 Piekv *m_piekv;
+Timer *timer;
 
 void sigint_handler(int sig) {
   printf("run finish job......\n");
@@ -164,11 +165,12 @@ int main(int argc, char *argv[]){
         }
     }
 
-    
     // std::signal(SIGINT, sigint_handler);
 
     port_init();
     m_piekv = new Piekv(pages, kblock_size, num_mem_blocks);
+
+    timer = new Timer();
 
     // show_system_status(&mytable);
     RTWorker *m_rtworkers[4];
@@ -211,6 +213,14 @@ int main(int argc, char *argv[]){
           m_piekv->log_->log_segments_[i]->print_table_stats();
           printf("\n\n");
         }
+      }
+      if (input == 2) {
+        timer->showTime();
+        // timer->clear();
+        for (int i = 0; i < 4; i++) {
+          printf("thread %d rx: %d\n",i,core_statistics[i].rx);
+        }
+        m_piekv->showUtilization();
       }
     }
 
