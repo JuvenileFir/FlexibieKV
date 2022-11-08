@@ -7,6 +7,7 @@
 #include <sys/resource.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <algorithm>
 
 #ifdef __cplusplus
 #define EXTERN_BEGIN extern "C" {
@@ -92,7 +93,6 @@ typedef uint32_t Cbool;
   } while (0);
 
 EXTERN_BEGIN
-
 
 
 typedef enum PiekvStatus {

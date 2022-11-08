@@ -57,7 +57,7 @@ void HashTable::ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 	size_t count;
 	size_t parts[round_hash_->S_ << 1];
 	/* once in a cycle*/
-  for (int i = 0; i < blocknum_to_move; i++) {
+  for (size_t i = 0; i < blocknum_to_move; i++) {
 		round_hash_->get_parts_to_remove(parts, &count);// get all parts to move
 		// round_hash_->DelBucket();
     remap_new_groups();
@@ -89,7 +89,7 @@ void HashTable::ExpandTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 	size_t count;
 	size_t parts[round_hash_->S_ << 1];
 	/* once in a cycle*/
-  for (int i = 0; i < blocknum_to_move; i++) {
+  for (size_t i = 0; i < blocknum_to_move; i++) {
     AddBlock((uint8_t *)tableblocksToMove[i]->block_ptr,tableblocksToMove[i]->block_id);
 		round_hash_->get_parts_to_add(parts, &count);// get all parts to move
 		round_hash_->NewBucket();
@@ -115,7 +115,9 @@ void HashTable::ExpandTable(TableBlock **tableblocksToMove, size_t blocknum_to_m
 	}  
 }
 
-int64_t HashTable::get_table(twoSnapshot *ts1, twoBucket *tb, Bucket *bucket, uint64_t key_hash, const uint8_t *key, size_t key_length){
+int64_t HashTable::get_table(twoSnapshot *ts1, twoBucket *tb, Bucket *bucket,
+                             uint64_t key_hash, const uint8_t *key,
+                             size_t key_length, const Bucket** located_bucket) {
   Cbool snapshot_is_flexibling = is_flexibling_;
   tablePosition tp;
   *tb = cal_two_buckets(key_hash);
@@ -127,9 +129,6 @@ int64_t HashTable::get_table(twoSnapshot *ts1, twoBucket *tb, Bucket *bucket, ui
   }
   if (tp.cuckoostatus == failure_key_not_found) {
     if (snapshot_is_flexibling) {
-      snapshot_is_flexibling = (Cbool)0;
-      uint32_t block_index = round_hash_new_->HashToBucket(key_hash);
-      Bucket *bucket = (Bucket *)this->get_block_ptr(block_index);
       return -2;
     }
   #ifdef EXP_LATENCY
@@ -148,8 +147,9 @@ int64_t HashTable::get_table(twoSnapshot *ts1, twoBucket *tb, Bucket *bucket, ui
   assert(tp.cuckoostatus == ok);
 
   // Cbool partial_value;
-  Bucket *located_bucket = &bucket[tp.bucket];
-  return located_bucket->item_vec[tp.slot];
+  Bucket *located_bucket_ = &bucket[tp.bucket];
+  *located_bucket = located_bucket_;
+  return tp.slot;
 }
 
 int64_t HashTable::set_table(tablePosition *tp, twoBucket *tb, uint64_t key_hash, const uint8_t *key, size_t key_length){
@@ -217,13 +217,11 @@ int64_t HashTable::set_table(tablePosition *tp, twoBucket *tb, uint64_t key_hash
  
 }
 
-
-
 //to modify
 void HashTable::redistribute_last_short_group(size_t *parts, size_t count) {
 	uint64_t bucket_index;
   uint32_t entry_index;
-  size_t target_p, target_e;
+  size_t target_p;
   int32_t k = count - 2;
   Bucket *buckets;
   Bucket *work_block;
@@ -303,13 +301,14 @@ void HashTable::redistribute_last_short_group(size_t *parts, size_t count) {
 }
 //to modify
 void HashTable::redistribute_first_long_group(size_t *parts, size_t count) {
-	int bucket_index, entry_index;
-  size_t target_p, target_e;
+	uint64_t bucket_index;
+  uint32_t entry_index;
+  size_t target_p;
   size_t k = 0;
   Bucket *bucket;
   Bucket *workp;
   Bucket *workb;
-  uint8_t key[MAX_KEY_LENGTH];
+  // uint8_t key[MAX_KEY_LENGTH];
   struct LogItem *item;
   struct twoBucket tb;
   while (k < count) {

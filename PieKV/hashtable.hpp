@@ -66,7 +66,9 @@ public:
     void RemoveBlock();
     void ShrinkTable(TableBlock **tableblocksToMove, size_t blocknum_to_move);//H2L中的hashtable部分
     void ExpandTable(TableBlock **tableblocksToMove, size_t blocknum_to_move);//L2H中的hashtable部分
-    int64_t get_table(twoSnapshot *ts1, twoBucket *tb,  Bucket * bucket, uint64_t key_hash, const uint8_t *key, size_t key_length);
+    int64_t get_table(twoSnapshot *ts1, twoBucket *tb, Bucket *bucket,
+                             uint64_t key_hash, const uint8_t *key,
+                             size_t key_length, const Bucket** located_bucket);
     int64_t set_table(tablePosition *tp, twoBucket *tb, uint64_t key_hash, const uint8_t *key, size_t key_length);
 
     void remap_new_groups();

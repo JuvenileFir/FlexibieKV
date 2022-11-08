@@ -43,7 +43,8 @@ typedef struct LogItem {
 
     /* the rest is meaningful only when kv_length_vec != 0 */
     uint64_t key_hash;
-    uint8_t data[0];
+    uint8_t data[0];//长度为0的数组的主要用途是为了满足需要变长度的结构体
+    
 }LogItem;  //  ALIGNED(64)
 
 

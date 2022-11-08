@@ -18,7 +18,7 @@ Timer *timer;
 void sigint_handler(int sig) {
   printf("run finish job......\n");
   printf("piekv run: %d",m_piekv->is_running_);
-  __sync_bool_compare_and_swap((volatile Cbool *)m_piekv->is_running_, 1U, 0U);
+  __sync_bool_compare_and_swap((volatile uint32_t *)&(m_piekv->is_running_), 1U, 0U);
   for (auto &t : workers) t.join();
   printf("\n");
   for (int i = 0; i < THREAD_NUM; i++) {
@@ -27,17 +27,17 @@ void sigint_handler(int sig) {
   }
   // print_table_stats(&mytable);
   printf("[INFO] Everything works fine.\n");
-  // for(int i=0;i<4;i++) printf("rx_queue_%d:%ld\n",i,core_statistics[i].rx);
+  for(int i=0;i<4;i++) printf("rx_queue_%d:%ld\n",i,core_statistics[i].rx);
   fflush(stdout);
   // TODO:show table status here    show_system_status(&mytable);
   // TODO:free all shm_free_all();
   exit(EXIT_SUCCESS);
 }
 
-template <typename Signal, typename... Args>
+/* template <typename Signal, typename... Args>
 void addSignal(Signal& sigset, Args... args) {
   (sigaddset(&sigset, args), ...);
-}
+} */
 
 void port_init() {
   unsigned nb_ports;
@@ -132,9 +132,9 @@ void print_piekv()
 
 int main(int argc, char *argv[]){
     int ch;
-    size_t multiple = 10;
+    // size_t multiple = 10;
     size_t pages = 20;
-    size_t flow_mode = 0, flow_pages = 0;
+    size_t flow_mode = 0/* , flow_pages = 0 */;
     while ((ch = getopt(argc, argv, "hcs:p:f:n:")) != -1) {
         switch (ch) {
         case 'h':
@@ -144,18 +144,18 @@ int main(int argc, char *argv[]){
                 "mode>] [-n <flow pages>]\n",
                 argv[0]);
             exit(0);
-        case 's':
+/*         case 's':
             multiple = atoi(optarg);
-            break;
+            break; */
         case 'p':
             pages = atoi(optarg);//log_pages=120
             break;
         case 'f':
             flow_mode = atoi(optarg);
             break;
-        case 'n':
+/*         case 'n':
             flow_pages = atoi(optarg);
-            break;
+            break; */
         case 'c':
             set_core_affinity = 0;
             break;
@@ -185,9 +185,7 @@ int main(int argc, char *argv[]){
             workers.push_back(std::thread(&RTWorker::worker_proc,m_rtworkers[id]));
     }
     
-    if (flow_mode == 3) workers.push_back(std::thread(&Piekv::memFlowingController,m_piekv));
-
-
+    if (flow_mode == 3) workers.push_back(std::thread(&Piekv::memFlowingController, m_piekv));
 
     // show_system_status(&mytable);
     // TODO: delete all new here and in signal
@@ -195,7 +193,7 @@ int main(int argc, char *argv[]){
     while(scanf("%d",&input)){
       if (input == 0){     
         printf("running finish job......\n");
-        __sync_bool_compare_and_swap((volatile Cbool *)&(m_piekv->is_running_), 1U, 0U);
+        __sync_bool_compare_and_swap((volatile uint32_t *)&(m_piekv->is_running_), 1U, 0U);
         for (auto &t : workers)
           t.join();
         printf("\n");
@@ -203,6 +201,9 @@ int main(int argc, char *argv[]){
         {
           m_piekv->log_->log_segments_[i]->print_table_stats();
           printf("\n\n");
+          printf("rx_queue_%d:%ld\n",i,core_statistics[i].rx);
+          printf("\n\n");
+
         }
         printf("[INFO] Everything works fine.\n");fflush(stdout);
         exit(EXIT_SUCCESS); 
@@ -228,6 +229,13 @@ int main(int argc, char *argv[]){
     for (auto &t : workers) {
         t.join();
     }
+/*     printf("\n");
+    for (int i = 0; i < THREAD_NUM; i++)
+    {
+      m_piekv->log_->log_segments_[i]->print_table_stats();
+      printf("\n\n");
+    }
+    printf("[INFO] Everything works fine.\n");fflush(stdout); */
 
     return EXIT_SUCCESS;
 }

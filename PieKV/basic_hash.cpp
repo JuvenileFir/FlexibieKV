@@ -82,7 +82,8 @@ uint16_t try_find_slot(const Bucket *bucket, const uint16_t tag, const uint64_t 
  * in `slot` and return true. If no duplicate key is found and no empty slot
  * is found, we store `ITEMS_PER_BUCKET` in `slot` and return true.
  */
-Cbool try_find_insert_bucket(const Bucket *bucket_, uint32_t *slot, const uint16_t tag, const uint8_t *key,
+Cbool try_find_insert_bucket(const Bucket *bucket_, uint32_t *slot,
+                             const uint16_t tag, const uint8_t *key,
                              uint32_t keylength) {
   uint32_t i;
   *slot = ITEMS_PER_BUCKET;
@@ -91,7 +92,8 @@ Cbool try_find_insert_bucket(const Bucket *bucket_, uint32_t *slot, const uint16
       *slot = i;
     } else {
       if (TAG(bucket_->item_vec[i]) != tag) continue;
-      LogItem *item = (LogItem *)kMemPool->locate_item(PAGE(bucket_->item_vec[i]), ITEM_OFFSET(bucket_->item_vec[i]));
+      LogItem *item = (LogItem *)kMemPool->locate_item(PAGE(bucket_->item_vec[i]),
+                                                       ITEM_OFFSET(bucket_->item_vec[i]));
       if (key_eq(item->data, ITEMKEY_LENGTH(item->kv_length_vec), key, keylength)) {
         *slot = i;
         return false;
@@ -100,4 +102,3 @@ Cbool try_find_insert_bucket(const Bucket *bucket_, uint32_t *slot, const uint16
   }
   return true;
 }
-

@@ -2,6 +2,9 @@
 
 extern Timer *timer;
 
+struct rte_ether_addr S_Addr = {{0x98, 0x03, 0x9b, 0x8f, 0xb1, 0xc9}};
+struct rte_ether_addr D_Addr = {{0x04, 0x3f, 0x72, 0xdc, 0x26, 0x25}};
+
 RTWorker::RTWorker(Piekv *piekv, size_t t_id, struct rte_mempool *send_mbuf_pool)
 {
     piekv_ = piekv;
@@ -74,8 +77,9 @@ void RTWorker::send_packet()
 }
 
 void RTWorker::parse_set(){
-  if (pktlen > (kMaxFrameLen - kResCounterLen - kMaxSetReturn - kEndMarkLen))
-    this->send_packet();
+  if (pktlen > (kMaxFrameLen - kResCounterLen - kMaxSetReturn - kEndMarkLen)) {
+    send_packet();
+  }
     RxSet_Packet *rxset_packet = (RxSet_Packet *)ptr;
     uint64_t key_hash = *(uint64_t *)(ptr + sizeof(RxSet_Packet)+ rxset_packet->key_len);
 
@@ -159,7 +163,7 @@ void RTWorker::complement_pkt(struct rte_mbuf *pkt, uint8_t *ptr, int pktlen)
     pktlen += kEndMarkLen;
     *(uint16_t *)ptr = MEGA_PKT_END;
 
-    while (pktlen < kMinFrameLen)
+    while ((uint32_t)pktlen < kMinFrameLen)
     {
         ptr += kEndMarkLen;
         pktlen += kEndMarkLen;
@@ -207,11 +211,16 @@ bool RTWorker::pkt_filter(const struct rte_mbuf *pkt)
     return false;
 }
 
-void RTWorker::worker_proc()
-{
-    bool ret, flag = false;
-    uint64_t key_hash;
-    uint32_t key_len, key_hash_len, val_len;
+void RTWorker::worker_proc() {
+    if (set_core_affinity)
+    {
+        cpu_set_t mask;
+        CPU_ZERO(&mask);
+        CPU_SET(core_id, &mask);
+        if (pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask) < 0)
+            fprintf(stderr, "[Error] set thread affinity failed\n");
+    }
+    bool flag = false;
 
     tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + kEIUHeaderLen + kResCounterLen; //  + kResCounterLen
     pktlen = kEIUHeaderLen + kResCounterLen;
@@ -291,12 +300,12 @@ void RTWorker::worker_proc()
                 
                 complement_pkt(tx_bufs_pt[pkt_id], tx_ptr, pktlen);
                 pkt_id++;
-                for (int k = 0; k < pkt_id; k++) {
+                for (uint32_t k = 0; k < pkt_id; k++) {
                     check_pkt_end(tx_bufs_pt[k]);
                 }
                 nb_tx = rte_eth_tx_burst(port, t_id_, tx_bufs_pt, pkt_id);
                 if(flag) {
-                    printf("tx thread\n");
+                    printf("Tx Numthreads \n");
                     flag = false;
                 }
 
@@ -317,5 +326,5 @@ void RTWorker::worker_proc()
     
     }
 
-    printf("t_id:%ld\n", t_id_);
+    printf("End t_id:%ld\n", t_id_);
 }
