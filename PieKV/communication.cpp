@@ -320,13 +320,10 @@ void RTWorker::worker_proc() {
             }
             rte_pktmbuf_free(rx_buf[i]);
         }
-<<<<<<< HEAD
-=======
                 if (t_id_ == 0 && nb_rx > 0) {timer->commonGetEndTime(3);}
     if (run_c > 0) {
             printf("handled\n");
         }
->>>>>>> 66c9db2543eb0397a4ea202fddbd7649e6ee0b0e
     
     }
     printf("[INFO]End rx_queue_%ld:%ld\n", t_id_, core_statistics[core_id].rx);
