@@ -216,6 +216,7 @@ int main(int argc, char *argv[]){
           m_piekv->log_->log_segments_[i]->print_table_stats();
           printf("\n\n");
         }
+        timer->showTime();
       }
       if (input == 2) {
         timer->showTime();

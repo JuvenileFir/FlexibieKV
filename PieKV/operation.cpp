@@ -123,12 +123,9 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     assert(key_len <= MAX_KEY_LENGTH);
     assert(val_len <= MAX_VALUE_LENGTH);
 
+    if (t_id == 0) {timer->commonGetStartTime(5);};
+    if (t_id == 0) {timer->commonGetStartTime(6);};
     LogSegment *segmentToSet = log_->log_segments_[t_id];
-
-#ifdef EXP_LATENCY
-    Cbool isTransitionPeriod = hashtable_->is_flexibling_;
-    auto start = std::chrono::steady_clock::now();
-#endif
 
     // Cbool overwriting = false;
     /*
@@ -140,7 +137,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     uint16_t tag = calc_tag(key_hash);
     uint32_t block_index = hashtable_->round_hash_->HashToBucket(key_hash);
     Bucket *bucket = (Bucket *)hashtable_->get_block_ptr(block_index);
-
+    if (t_id == 0) {timer->commonGetEndTime(6);};
     /*
      * XXX: Temporarily, the first bucket's `lock` of a partiton is used for
      * lock this bucket. When we execute a `set` that needs to displace
@@ -150,6 +147,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
      * is the possibility for losing slot(s). So locking the bucket with FIFO
      * policy is the simplest way.
      */
+    if (t_id == 0) {timer->commonGetStartTime(7);};
     while (1) {
         uint8_t v = *(volatile uint8_t *)&bucket->lock & ~((uint8_t)1);
         uint8_t new_v = v + (uint8_t)2;
@@ -164,6 +162,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     // memory_barrier();
     assert((*(volatile uint8_t *)&bucket->lock) > 1);
     __sync_fetch_and_sub((volatile uint8_t *)&(bucket->lock), (uint8_t)2);
+
     if (tp.cuckoostatus == failure_table_full)
     {
         // TODO: support eviction
@@ -202,51 +201,31 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     }
     assert(tp.cuckoostatus == ok);
     struct Bucket *located_bucket = &bucket[tp.bucket];
-
+    if (t_id == 0) {timer->commonGetEndTime(7);};
+    if (t_id == 0) {timer->commonGetStartTime(8);};
     uint64_t new_item_size = (uint32_t)(sizeof(LogItem) + ROUNDUP8(key_len) + ROUNDUP8(val_len));
     int64_t item_offset;
     item_offset = segmentToSet->AllocItem(new_item_size);
-    /* if (item_offset == -1) {
-        unlock_two_buckets(bucket, tb);
-#ifdef EXP_LATENCY
-        auto end = std::chrono::steady_clock::now();
-#ifdef TRANSITION_ONLY
-        if (isTransitionPeriod)
-        {
-            printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-        }
-#else
-        printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-#endif
-#endif
-        segmentToSet->table_stats_->set_fail += 1;
-        return false;//return BATCH_FULL;
-    } else */
+
+
     if (item_offset == -2)
     {
         unlock_two_buckets(bucket, tb);//???lock two buckets在cuckoo insert中
-#ifdef EXP_LATENCY
-        auto end = std::chrono::steady_clock::now();
-#ifdef TRANSITION_ONLY
-        if (isTransitionPeriod)
-        {
-            printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-        }
-#else
-        printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-#endif
-#endif
         segmentToSet->table_stats_->set_fail += 1;
         return false;//return BATCH_TOO_SMALL;
     }
     // uint64_t new_tail = segmentToSet->get_tail();//仿照mica添加
+    if (t_id == 0) {timer->commonGetEndTime(8);};
+    if (t_id == 0) {timer->commonGetStartTime(9);};
     uint32_t block_id = segmentToSet->get_block_id(segmentToSet->usingblock_);
     LogItem *new_item = (LogItem *)segmentToSet->locateItem(block_id, item_offset);
     segmentToSet->table_stats_->set_success += 1;
+    if (t_id == 0) {timer->commonGetEndTime(9);};
 
 #ifdef STORE_COLLECT_STATS
     segmentToSet->store_stats_->actual_used_mem += new_item_size;
 #endif
+    if (t_id == 0) {timer->commonGetStartTime(10);};
     new_item->item_size = new_item_size;
 
     segmentToSet->set_item(new_item, key_hash, key, (uint32_t)key_len, val, (uint32_t)val_len, VALID);
@@ -255,20 +234,10 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
 
     unlock_two_buckets(bucket, tb);
     segmentToSet->table_stats_->count += 1;
-
+    if (t_id == 0) {timer->commonGetEndTime(10);};
     //cleanup_bucket(item_offset,new_tail); TODO!
 
-#ifdef EXP_LATENCY
-    auto end = std::chrono::steady_clock::now();
-#ifdef TRANSITION_ONLY
-    if (isTransitionPeriod)
-    {
-        printf("SET(succ): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-    }
-#else
-    printf("SET(succ): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-#endif
-#endif
+    if (t_id == 0) {timer->commonGetEndTime(5);};
     return true;
 }
 

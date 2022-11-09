@@ -13,6 +13,9 @@ class Timer{
   mutex timeMutex[30];
   double timebase;
 
+  int startCount[30];
+  int endCount[30];
+
   Timer() {
     for (int i = 0; i < 30; i++) {
       time[i] = 0.0;
@@ -25,6 +28,14 @@ class Timer{
   void clear() {
     for (int i = 0; i < 30; i++) {
       time[i] = 0.0;
+      startCount[i] = 0;
+      endCount[i] = 0;
+    }
+  }
+
+  void reset() {
+    for (int i = 0; i < 30; i++) {
+      time[i] = timebase;
     }
   }
   
@@ -33,6 +44,7 @@ class Timer{
     gettimeofday(&t1, NULL);
     lock_guard<mutex> lock(timeMutex[timeId]);
     time[timeId] -= (t1.tv_sec * 1000.0 + t1.tv_usec / 1000.0) - timebase;
+    startCount[timeId] += 1;
   }
 
   void commonGetEndTime(int timeId) {
@@ -40,6 +52,7 @@ class Timer{
     gettimeofday(&t1, NULL);
     lock_guard<mutex> lock(timeMutex[timeId]);
     time[timeId] += (t1.tv_sec * 1000.0 + t1.tv_usec / 1000.0) - timebase;
+    endCount[timeId] += 1;
   }
 
   void quickGetStartTime(int *timeArray, int timeId) {
@@ -67,6 +80,20 @@ class Timer{
     time += (t1.tv_sec * 1000.0 + t1.tv_usec / 1000.0) - timebase;
     return time;
   }
+
+  void fix() {
+    for (int i = 0; i < 30; i++) {
+      int exp = endCount[i] - startCount[i];
+      if (exp > 0) {
+        for (int j = 0; j < exp; j++) {
+          time[i] += timebase;
+        }
+      }
+      if (exp < 0) {
+        cout << "[WARNING] start count greater than end count" << endl;
+      }
+    }
+  }
   
   void showTime() {
     cout << endl;
@@ -79,7 +106,26 @@ class Timer{
     cout << time[2] << endl;
     cout << "[Time]  handle: ";
     cout << time[3] << endl;
+
+    // set time
+    cout << "[Time] total set: ";
+    cout << time[5] << endl;
+    cout << "[Time] cal hash: ";
+    cout << fixed << time[6] << endl;
+    cout << "[Time] cuckoo insert: ";
+    cout << time[7] << endl;
+    cout << "[Time] alloc item: ";
+    cout << time[8] << endl;
+    cout << "[Time] locate item: ";
+    cout << time[9] << endl;
+    cout << "[Time] set item: ";
+    cout << time[10] << endl;
     // add new time counter here
+    cout << "[Time] send set: ";
+    cout << time[11] << endl;
+    cout << "[Time] total get: ";
+    cout << time[12] << endl;
+
     cout << "##############################" << endl;
     cout << endl;
   }

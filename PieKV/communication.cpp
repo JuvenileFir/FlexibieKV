@@ -78,9 +78,15 @@ void RTWorker::send_packet()
 }
 
 void RTWorker::parse_set(){
+    if (t_id_ == 0) {
+        timer->commonGetStartTime(11);
+    }
   if (pktlen > (kMaxFrameLen - kResCounterLen - kMaxSetReturn - kEndMarkLen)) {
     send_packet();
   }
+  if (t_id_ == 0) {
+        timer->commonGetEndTime(11);
+    }
     RxSet_Packet *rxset_packet = (RxSet_Packet *)ptr;
     uint64_t key_hash = *(uint64_t *)(ptr + sizeof(RxSet_Packet)+ rxset_packet->key_len);
 
@@ -117,6 +123,9 @@ void RTWorker::parse_get()
 	if (pktlen > (kMaxFrameLen - kResCounterLen - max_get_return - kEndMarkLen)) {   // bwb:超过GET返回包安全length，暂停解析，先进入发包流程;其中GET_MAX_RETURN_LEN=16，原为22 ???
         send_packet();
 	}
+    if (t_id_ == 0) {
+        timer->commonGetStartTime(12);
+    }
 	RxGet_Packet *rxget_packet = (RxGet_Packet *)ptr;
 	uint8_t *key = ptr + kTypeLen + kKeylenLen + khashlenLen; 
 	uint64_t key_hash = *(uint64_t *)(key + rxget_packet->key_len);
@@ -125,7 +134,10 @@ void RTWorker::parse_get()
 													tx_ptr + kHeaderLen + rxget_packet->key_len,
 													(uint32_t *)(tx_ptr + kTypeLen + kKeylenLen));
 
-	if (ret) {
+	if (t_id_ == 0) {
+        timer->commonGetEndTime(12);
+    }
+    if (ret) {
 			rt_counter_.get_succ += 1;
 			TxGet_Packet *txget_packet = (TxGet_Packet *)tx_ptr;
 			txget_packet->result = GET_SUCC;
@@ -253,13 +265,15 @@ void RTWorker::worker_proc() {
             while (*(uint16_t *)ptr != MEGA_PKT_END) {
                 op_id += 1;
                 if (*(uint16_t *)ptr == MEGA_JOB_GET) {
-                    // if (run_c > 0 && op_id == 20) {
-                    //     printf("start get\n");
-                    // }
+                    if (t_id_ == 0 && nb_rx > 0)
+                    {
+                        timer->commonGetStartTime(1);
+                    }
                     parse_get();
-                    // if (run_c > 0 && op_id == 20) {
-                    //     printf("end get\n");
-                    // }
+                    if (t_id_ == 0 && nb_rx > 0)
+                    {
+                        timer->commonGetEndTime(1);
+                    }
                 } else if (*(uint16_t *)ptr == MEGA_JOB_SET) {
                     if (t_id_ == 0 && nb_rx > 0)
                     {
@@ -308,8 +322,12 @@ void RTWorker::worker_proc() {
             }
             rte_pktmbuf_free(rx_buf[i]);
         }
+        /* for (int i = 0; i < nb_rx; i++) {
+            rte_pktmbuf_free(rx_buf[i]);
+        } */
         if (t_id_ == 0 && nb_rx > 0) {timer->commonGetEndTime(3);}
-        if (core_statistics[0].rx % 50000 == 0 && core_statistics[0].rx > 0) {
+        if (core_statistics[0].rx % 50000 == 0 && core_statistics[0].rx > 0 && t_id_ == 0) {
+            // timer->fix();
             timer->showTime();
             piekv_->log_->log_segments_[0]->print_table_stats();
         }
