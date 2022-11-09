@@ -57,6 +57,7 @@ add_library(flexiblekv STATIC
 	operation
 	record
 	communication
+    timer
 )
 
 SET(DPDK_LIBS

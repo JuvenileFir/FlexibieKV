@@ -141,25 +141,29 @@ struct tablePosition cuckoo_insert(Bucket *partition, uint64_t keyhash, uint16_t
   if (res2 != ITEMS_PER_BUCKET) {
     return (tablePosition){tb.b2, res2, ok};
   }
+  res2 = random() % 7;
+  return (tablePosition){tb.b2, res2, ok};
 
-  uint32_t insertbucket, insertslot;
-  cuckooStatus st = run_cuckoo(partition, tb, &insertbucket, &insertslot);
-  if (st == ok) {
-    assert(is_entry_expired(partition[insertbucket].item_vec[insertslot]));
-    /*
-     * Since we unlocked the buckets during run_cuckoo, another insert
-     * could have inserted the same key into either tb.b1 or
-     * tb.b2, so we check for that before doing the insert.
-     */
-    tablePosition pos = cuckoo_find(partition, keyhash, tb, key, keylength);
-    if (pos.cuckoostatus == ok) {
-      pos.cuckoostatus = failure_key_duplicated;
-      return pos;
-    }
-    return (tablePosition){insertbucket, insertslot, ok};
-  }
-  assert(st == failure);
-  return (tablePosition){0, 0, failure_table_full};
+// /*
+//   uint32_t insertbucket, insertslot;
+//   cuckooStatus st = run_cuckoo(partition, tb, &insertbucket, &insertslot);
+//   if (st == ok) {
+//     assert(is_entry_expired(partition[insertbucket].item_vec[insertslot]));
+//     /*
+//      * Since we unlocked the buckets during run_cuckoo, another insert
+//      * could have inserted the same key into either tb.b1 or
+//      * tb.b2, so we check for that before doing the insert.
+//      */
+//     tablePosition pos = cuckoo_find(partition, keyhash, tb, key, keylength);
+//     if (pos.cuckoostatus == ok) {
+//       pos.cuckoostatus = failure_key_duplicated;
+//       return pos;
+//     }
+//     return (tablePosition){insertbucket, insertslot, ok};
+//   }
+//   assert(st == failure);
+//   return (tablePosition){0, 0, failure_table_full};
+//   */
 }
 
 /*
