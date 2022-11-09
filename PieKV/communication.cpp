@@ -227,18 +227,12 @@ void RTWorker::worker_proc() {
     int run_c = 0;
     while (piekv_->is_running_)
     {
-        if (run_c > 0) {
-            printf("start receive\n");
-        }
         if (t_id_ == 0 && nb_rx > 0 && run_c > 0) {timer->commonGetStartTime(0);}
         nb_rx = rte_eth_rx_burst(port, t_id_, rx_buf, BURST_SIZE);
         core_statistics[core_id].rx += nb_rx;
         if (t_id_ == 0 && nb_rx > 0) {timer->commonGetEndTime(0); run_c = 1;}
-        if (run_c > 0) {
-            printf("received\n");
-        }
 
-                if (t_id_ == 0 && nb_rx > 0) {timer->commonGetStartTime(3);}
+        if (t_id_ == 0 && nb_rx > 0) {timer->commonGetStartTime(3);}
         for (int i = 0; i < nb_rx; i++) {
             if (pkt_filter(rx_buf[i]))
             {
@@ -270,13 +264,7 @@ void RTWorker::worker_proc() {
                     {
                         timer->commonGetStartTime(1);
                     }
-                    if (run_c > 0 && op_id == 20) {
-                        printf("start set\n");
-                    }
                     parse_set();
-                    if (run_c > 0 && op_id == 20) {
-                        printf("end set\n");
-                    }
                     if (t_id_ == 0 && nb_rx > 0)
                     {
                         timer->commonGetEndTime(1);
@@ -319,11 +307,11 @@ void RTWorker::worker_proc() {
             }
             rte_pktmbuf_free(rx_buf[i]);
         }
-                if (t_id_ == 0 && nb_rx > 0) {timer->commonGetEndTime(3);}
-    if (run_c > 0) {
-            printf("handled\n");
+        if (t_id_ == 0 && nb_rx > 0) {timer->commonGetEndTime(3);}
+        if (core_statistics[0].rx % 50000 == 0 && core_statistics[0].rx > 0) {
+            timer->showTime();
+            piekv_->log_->log_segments_[0]->print_table_stats();
         }
-    
     }
 
     printf("End t_id:%ld\n", t_id_);
