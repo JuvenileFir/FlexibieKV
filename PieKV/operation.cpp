@@ -148,21 +148,25 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
      * policy is the simplest way.
      */
     if (t_id == 0) {timer->commonGetStartTime(7);};
-    while (1) {
-        uint8_t v = *(volatile uint8_t *)&bucket->lock & ~((uint8_t)1);
-        uint8_t new_v = v + (uint8_t)2;
-        if (__sync_bool_compare_and_swap((volatile uint8_t *)&bucket->lock, v, new_v))
-            break;
-    }
-
+    // while (1) {
+    //     uint8_t v = *(volatile uint8_t *)&bucket->lock & ~((uint8_t)1);
+    //     uint8_t new_v = v + (uint8_t)2;
+    //     if (__sync_bool_compare_and_swap((volatile uint8_t *)&bucket->lock, v, new_v))
+    //         break;
+    // }
+    if (t_id == 0) {timer->commonGetStartTime(14);};
     twoBucket tb = cal_two_buckets(key_hash);
+    if (t_id == 0) {timer->commonGetEndTime(14);};
+    if (t_id == 0) {timer->commonGetStartTime(15);};
     lock_two_buckets(bucket, tb);
+    if (t_id == 0) {timer->commonGetEndTime(15);};
     tablePosition tp = cuckoo_insert(bucket, key_hash, tag, tb, key, key_len);
 
-    // memory_barrier();
-    assert((*(volatile uint8_t *)&bucket->lock) > 1);
-    __sync_fetch_and_sub((volatile uint8_t *)&(bucket->lock), (uint8_t)2);
+    // // memory_barrier();
+    // assert((*(volatile uint8_t *)&bucket->lock) > 1);
+    // __sync_fetch_and_sub((volatile uint8_t *)&(bucket->lock), (uint8_t)2);
 
+    if (t_id == 0) {timer->commonGetEndTime(7);};
     if (tp.cuckoostatus == failure_table_full)
     {
         // TODO: support eviction
@@ -177,6 +181,8 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
         printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
 #endif
 #endif
+        unlock_two_buckets(bucket, tb);
+        segmentToSet->table_stats_->set_inplace += 1;
         segmentToSet->table_stats_->set_fail += 1;
         return false;//return FAILURE_HASHTABLE_FULL;
     }
@@ -196,12 +202,12 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
         printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
 #endif
 #endif
+        segmentToSet->table_stats_->set_evicted += 1;
         segmentToSet->table_stats_->set_fail += 1;
         return false;//return FAILURE_ALREADY_EXIST;
     }
     assert(tp.cuckoostatus == ok);
     struct Bucket *located_bucket = &bucket[tp.bucket];
-    if (t_id == 0) {timer->commonGetEndTime(7);};
     if (t_id == 0) {timer->commonGetStartTime(8);};
     uint64_t new_item_size = (uint32_t)(sizeof(LogItem) + ROUNDUP8(key_len) + ROUNDUP8(val_len));
     int64_t item_offset;
@@ -211,6 +217,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     if (item_offset == -2)
     {
         unlock_two_buckets(bucket, tb);//???lock two buckets在cuckoo insert中
+        segmentToSet->table_stats_->test_notfound += 1;
         segmentToSet->table_stats_->set_fail += 1;
         return false;//return BATCH_TOO_SMALL;
     }

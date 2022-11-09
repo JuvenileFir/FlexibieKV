@@ -130,4 +130,56 @@ class Timer{
     cout << endl;
   }
 
+  void showCount() {
+    cout << "###########   Time  ##########" << endl;
+    cout << "[Time] receive: ";
+    cout << startCount[0] << endl;
+    cout << endCount[0] << endl;
+    cout << "[Time] parse: ";
+    cout << startCount[1] << endl;
+    cout << endCount[1] << endl;
+    cout << "[Time] set: ";
+    cout << startCount[2] << endl;
+    cout << endCount[2] << endl;
+    cout << "[Time]  handle: ";
+    cout << startCount[3] << endl;
+    cout << endCount[3] << endl;
+
+    // set time
+    cout << "[Time] total set: ";
+    cout << startCount[5] << endl;
+    cout << endCount[5] << endl;
+    cout << "[Time] cal hash: ";
+    cout << startCount[6] << endl;
+    cout << endCount[6] << endl;
+    cout << "[Time] cuckoo insert: ";
+    cout << startCount[7] << endl;
+    cout << endCount[7] << endl;
+    cout << "[Time] alloc item: ";
+    cout << startCount[8] << endl;
+    cout << endCount[8] << endl;
+    cout << "[Time] locate item: ";
+    cout << startCount[9] << endl;
+    cout << endCount[9] << endl;
+    cout << "[Time] set item: ";
+    cout << startCount[10] << endl;
+    cout << endCount[10] << endl;
+    // add new time counter here
+    cout << "[Time] send set: ";
+    cout << startCount[11] << endl;
+    cout << endCount[11] << endl;
+    cout << "[Time] total get: ";
+    cout << startCount[12] << endl;
+    cout << endCount[12] << endl;
+
+    cout << "[Time] 14: ";
+    cout << startCount[14] << endl;
+    cout << endCount[14] << endl;
+    cout << "[Time] 15: ";
+    cout << startCount[15] << endl;
+    cout << endCount[15] << endl;
+
+    cout << "##############################" << endl;
+  }
+
 };

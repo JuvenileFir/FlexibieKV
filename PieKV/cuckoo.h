@@ -6,11 +6,15 @@
 #include <math.h>
 #include "basic_hash.h"
 
+#include <mutex>
+
 #define MAX_CUCKOO_COUNT 5602U
 // 2 * ((ITEMS_PER_BUCKET == 1)
 //     ? MAX_BFS_PATH_LEN
 //     : (const_pow_slot_per_bucket_MAX_BFS_PATH_LEN - 1) /
 //     (ITEMS_PER_BUCKET - 1));
+
+extern std::mutex m_lock;
 
 typedef struct twoBucket {
   uint32_t b1;

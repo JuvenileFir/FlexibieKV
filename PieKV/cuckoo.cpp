@@ -1,6 +1,7 @@
 #include <assert.h>
 #include "cuckoo.h"
 
+std::mutex m_lock;
 
 static const uint8_t MAX_BFS_PATH_LEN = 5;
 // static const uint16_t const_pow_slot_per_bucket_MAX_BFS_PATH_LEN =
@@ -70,6 +71,7 @@ Cbool is_snapshots_same(twoSnapshot ts1, twoSnapshot ts2) { return (ts1.v1 == ts
 void lock_two_buckets(Bucket *partition, twoBucket twobuckets) {
   // sort_two_bucket(&twobuckets);
   // assert(twobuckets.b1 < twobuckets.b2);
+  std::lock_guard<std::mutex> lock(m_lock);
   if (twobuckets.b1 > twobuckets.b2) swap_uint(&twobuckets.b1, &twobuckets.b2);
   write_lock_bucket(&partition[twobuckets.b1]);
   if (twobuckets.b1 != twobuckets.b2) write_lock_bucket(&partition[twobuckets.b2]);

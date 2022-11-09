@@ -226,6 +226,9 @@ int main(int argc, char *argv[]){
         }
         m_piekv->showUtilization();
       }
+      if (input == 3) {
+        timer->showCount();
+      }
     }
 
 
