@@ -29,6 +29,26 @@ void Piekv::showUtilization()
     printf("[STATUS] Log   Memory utilization: %d / %d = %f %\n", store_load, store_capa, vaild_percentage);
     printf("[STATUS] Index Memory utilization: %d / %d = %f %\n", index_load, index_capa, load_factor);
     printf("[STATUS] Total Memory utilization: %f\n", total_mem_utilization);
+
+    // for (int i = 0; i < hashtable_->table_block_num_; i++) {
+    //     TableBlock *block = hashtable_->table_blocks_[i];
+    //     int counter = 0;
+    //     for (int j = 0; j < 32768; j++) {
+    //         Bucket *bucket = (Bucket *)(block + 64 * j);
+    //         for (int k = 0; k < 7; k++) {
+    //             if (bucket->item_vec[k] != 0){
+    //                 counter += 1;
+    //                 break;
+    //             }
+    //         }
+    //         /* if (counter != 0) {
+    //             break;
+    //         } */
+    //     }
+    //     if (counter != 0)
+    //         printf("[STATUS] block %d not empty %d\n",i, counter);
+    // } 
+    
 }
 
 void Piekv::memFlowingController()
