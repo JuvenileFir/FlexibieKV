@@ -1,4 +1,5 @@
 #include "communication.hpp"
+extern Piekv* m_piekv;
 
 extern Timer *timer;
 
@@ -313,6 +314,6 @@ void RTWorker::worker_proc() {
             piekv_->log_->log_segments_[0]->print_table_stats();
         }
     }
+    printf("[INFO]End rx_queue_%ld:%ld\n", t_id_, core_statistics[core_id].rx);
 
-    printf("End t_id:%ld\n", t_id_);
 }

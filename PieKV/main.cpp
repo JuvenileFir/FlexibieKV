@@ -201,10 +201,12 @@ int main(int argc, char *argv[]){
         {
           m_piekv->log_->log_segments_[i]->print_table_stats();
           printf("\n\n");
-          printf("rx_queue_%d:%ld\n",i,core_statistics[i].rx);
-          printf("\n\n");
-
         }
+        /* for (int i = 0; i < 36; i++)
+        {
+          printf("[main]End rx_queue_%ld:%ld\n", i, core_statistics[i].rx);
+          printf("\n");
+        } */
         printf("[INFO] Everything works fine.\n");fflush(stdout);
         exit(EXIT_SUCCESS); 
       }

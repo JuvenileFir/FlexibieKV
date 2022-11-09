@@ -64,6 +64,8 @@ bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key,
         
         if (!is_snapshots_same(*ts1, read_two_buckets_end(bucket, *tb))) continue;
         segmentToGet->table_stats_->get_found += 1;
+        segmentToGet->table_stats_->count += 1;
+
         item_offset += block_id * mempool_->get_block_size();
         if (allow_mutation)
             this->move_to_head(bucket, (Bucket*)located_bucket,item, key_length,
@@ -252,7 +254,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     located_bucket->item_vec[tp.slot] = ITEM_VEC(tag, block_id, item_offset);
 
     unlock_two_buckets(bucket, tb);
-    log_->log_segments_[t_id]->table_stats_->count += 1;
+    segmentToSet->table_stats_->count += 1;
 
     //cleanup_bucket(item_offset,new_tail); TODO!
 
