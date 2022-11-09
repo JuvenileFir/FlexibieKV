@@ -1,5 +1,5 @@
 #include "communication.hpp"
-
+extern Piekv* m_piekv;
 struct rte_ether_addr S_Addr = {{0x98, 0x03, 0x9b, 0x8f, 0xb1, 0xc9}};
 struct rte_ether_addr D_Addr = {{0x04, 0x3f, 0x72, 0xdc, 0x26, 0x25}};
 
@@ -261,6 +261,7 @@ void RTWorker::worker_proc() {
             udph = (struct rte_udp_hdr *)((char *)rte_pktmbuf_mtod(rx_buf[i], char *) + 
                                           sizeof(struct rte_ether_hdr) +
                                           sizeof(struct rte_ipv4_hdr));
+            
             while (*(uint16_t *)ptr != MEGA_PKT_END) {
                 if (*(uint16_t *)ptr == MEGA_JOB_GET) {
                     parse_get();
@@ -304,7 +305,8 @@ void RTWorker::worker_proc() {
             }
             rte_pktmbuf_free(rx_buf[i]);
         }
+    
     }
+    printf("[INFO]End rx_queue_%ld:%ld\n", t_id_, core_statistics[core_id].rx);
 
-    printf("End t_id:%ld\n", t_id_);
 }
