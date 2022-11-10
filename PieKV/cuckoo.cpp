@@ -68,6 +68,26 @@ struct twoSnapshot read_two_buckets_end(Bucket *partition, twoBucket tb) {
 
 Cbool is_snapshots_same(twoSnapshot ts1, twoSnapshot ts2) { return (ts1.v1 == ts2.v1) && (ts1.v2 == ts2.v2); }
 
+// void lock_two_buckets_wrapper(Bucket *partition, twoBucket twobuckets)
+// {
+//   std::mutex m;
+//   std::condition_variable cv;
+  
+//   std::thread t([&cv, partition, twobuckets]()
+//   {
+//     lock_two_buckets(partition, twobuckets);
+//     cv.notify_one();
+//   });
+
+//   t.detach();
+
+//   {
+//     std::unique_lock<std::mutex> l(m);
+//     if (cv.wait_for(l, 3s) == std::cv_status::timeout)
+//       throw std::runtime_error("Timeout");
+//   }
+// }
+
 void lock_two_buckets(Bucket *partition, twoBucket twobuckets) {
   // sort_two_bucket(&twobuckets);
   // assert(twobuckets.b1 < twobuckets.b2);
