@@ -246,22 +246,30 @@ void HashTable::redistribute_last_short_group(size_t *parts, size_t count) {
       // lock bucket to write
       write_lock_bucket(&buckets[bucket_index]);
       for (entry_index = 0; entry_index < ITEMS_PER_BUCKET; entry_index++) {
-        if (!is_entry_expired(buckets[bucket_index].item_vec[entry_index])) {  // check if this entry exists
+        if (!is_entry_expired(buckets[bucket_index].item_vec[entry_index])) {  
+          // check if this entry exists
 
           /* 
-          here checks if target_p should move or not, which depends on using the new group map or the old one
+          here checks if target_p should move or not, which depends on using the new group map 
+          or the old one
           we decide to use the new group map to check
           if target_p == parts[k], which means this entry should not move, we will leave it here
-          if target_p != parts[k], which means this entry should move, then write it into new position and then delete it here 
+          if target_p != parts[k], which means this entry should move, then write it into
+          new position and then delete it here 
           */
-          item = mempool_->locate_item(PAGE(buckets[bucket_index].item_vec[entry_index]), ITEM_OFFSET(buckets[bucket_index].item_vec[entry_index]));
+          item = mempool_->locate_item(PAGE(buckets[bucket_index].item_vec[entry_index]), 
+                                      ITEM_OFFSET(buckets[bucket_index].item_vec[entry_index]));
           target_p = round_hash_new_->HashToBucket(item->key_hash);
 
           if (target_p != parts[k])  {
             work_block = (Bucket *)get_block_ptr(target_p);
             tb = cal_two_buckets(item->key_hash);
-            tablePosition tp = cuckoo_insert(work_block, item->key_hash, TAG(buckets[bucket_index].item_vec[entry_index]),
-                                             tb, item->data, ITEMKEY_LENGTH(item->kv_length_vec));
+            lock_two_buckets(work_block, tb);
+            tablePosition tp = cuckoo_insert(
+                work_block, item->key_hash,
+                TAG(buckets[bucket_index].item_vec[entry_index]),
+                tb, item->data, ITEMKEY_LENGTH(item->kv_length_vec));
+
             if (tp.cuckoostatus == failure_table_full) {
               // TODO: support overwrite
               // assert(false);
@@ -277,7 +285,7 @@ void HashTable::redistribute_last_short_group(size_t *parts, size_t count) {
               unlock_two_buckets(work_block, tb);
               continue;
             }
-            assert(tp.cuckoostatus == ok);
+            // assert(tp.cuckoostatus == ok);
 
             work_bucket = &(work_block[tp.bucket]);
             work_bucket->item_vec[tp.slot] = buckets[bucket_index].item_vec[entry_index];

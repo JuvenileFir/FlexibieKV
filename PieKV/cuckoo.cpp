@@ -1,7 +1,6 @@
 #include <assert.h>
 #include "cuckoo.h"
 
-
 static const uint8_t MAX_BFS_PATH_LEN = 5;
 // static const uint16_t const_pow_slot_per_bucket_MAX_BFS_PATH_LEN =
 //     (uint16_t)16807;
@@ -142,7 +141,7 @@ struct tablePosition cuckoo_insert(Bucket *partition, uint64_t keyhash, uint16_t
     return (tablePosition){tb.b2, res2, ok};
   }
   res2 = random() % 7;
-  return (tablePosition){tb.b2, res2, ok};
+  return (tablePosition){tb.b2, res2, overwrite};
 
   uint32_t insertbucket, insertslot;
   cuckooStatus st = run_cuckoo(partition, tb, &insertbucket, &insertslot);

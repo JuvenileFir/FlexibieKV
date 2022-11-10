@@ -203,7 +203,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
         segmentToSet->table_stats_->set_fail += 1;
         return false;//return FAILURE_ALREADY_EXIST;
     }
-    assert(tp.cuckoostatus == ok);
+    if (!((tp.cuckoostatus == 0 ) || (tp.cuckoostatus == 6))) assert(0);
     struct Bucket *located_bucket = &bucket[tp.bucket];
 
     uint64_t new_item_size = (uint32_t)(sizeof(LogItem) + ROUNDUP8(key_len) + ROUNDUP8(val_len));
@@ -237,7 +237,8 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     located_bucket->item_vec[tp.slot] = ITEM_VEC(tag, block_id, item_offset);
 
     unlock_two_buckets(bucket, tb);
-    segmentToSet->table_stats_->count += 1;
+    if (tp.cuckoostatus != 6)
+        segmentToSet->table_stats_->count += 1;
 
     //cleanup_bucket(item_offset,new_tail); TODO!
 
@@ -382,7 +383,8 @@ void Piekv::print_trigger() {
         pre_count[3] = log_->log_segments_[0]->table_stats_->rx_pkt_num
                         +log_->log_segments_[1]->table_stats_->rx_pkt_num
                         +log_->log_segments_[2]->table_stats_->rx_pkt_num
-                        +log_->log_segments_[3]->table_stats_->rx_pkt_num;            
+                        +log_->log_segments_[3]->table_stats_->rx_pkt_num;
+        this->showUtilization();        
 // printf("latter count: %ld\n",pre_count[0]);
 
     }

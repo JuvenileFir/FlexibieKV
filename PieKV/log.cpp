@@ -242,11 +242,16 @@ int64_t LogSegment::AllocItem(uint64_t item_size) {
             if (usingblock_ < blocknum_ - 1) {
                 // use next block
                 usingblock_++;
+                if (round_) {
+                    store_stats_->actual_used_mem -= mempool_->get_block_size() - log_blocks_[usingblock_]->residue;
+                    log_blocks_[usingblock_]->residue = mempool_->get_block_size();
+                }   
             } else {
                 usingblock_ = 0;
                 round_++;
-                for(uint32_t i = 0; i < blocknum_; i++)
-                    log_blocks_[i]->residue = mempool_->get_block_size();
+                store_stats_->actual_used_mem -= mempool_->get_block_size() - log_blocks_[0]->residue;
+                log_blocks_[0]->residue = mempool_->get_block_size();
+
                 printf("round:%d\n",round_);
                 // return -1;
             }

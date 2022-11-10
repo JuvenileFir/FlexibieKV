@@ -1,7 +1,7 @@
 #include "communication.hpp"
-extern Piekv* m_piekv;
 struct rte_ether_addr S_Addr = {{0x98, 0x03, 0x9b, 0x8f, 0xb1, 0xc9}};
 struct rte_ether_addr D_Addr = {{0x04, 0x3f, 0x72, 0xdc, 0x26, 0x25}};
+extern Piekv* m_piekv;
 
 RTWorker::RTWorker(Piekv *piekv, size_t t_id, struct rte_mempool *send_mbuf_pool)
 {

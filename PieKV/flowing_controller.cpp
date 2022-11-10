@@ -19,8 +19,8 @@ void Piekv::showUtilization()
     store_capa = log_->total_blocknum_ * mempool_->get_block_size();
     index_capa = hashtable_->table_block_num_ * BUCKETS_PER_PARTITION * ITEMS_PER_BUCKET;
 
-    vaild_percentage = store_load * factor / store_capa;
-    load_factor = index_load * factor / index_capa;
+    vaild_percentage = store_load * factor / store_capa * 100;
+    load_factor = index_load * factor / index_capa * 100;
 
     int total_block_num = log_->total_blocknum_ + hashtable_->table_block_num_;
     double total_mem_utilization = 
@@ -84,7 +84,7 @@ void Piekv::memFlowingController()
     while (is_running_) {
 
         // sleep so get/set can run for a while
-        sleep(5);
+        sleep(1);
         
         // log class |
         store_load = 0;

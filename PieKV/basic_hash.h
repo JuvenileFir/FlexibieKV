@@ -26,6 +26,7 @@ typedef enum cuckooStatus {
   failure_key_duplicated,
   failure_table_full,
   failure_under_expansion,
+  overwrite,
 } cuckooStatus;
 
 typedef enum ITEM_RESULT {
