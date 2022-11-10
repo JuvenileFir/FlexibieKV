@@ -36,12 +36,12 @@ uint32_t read_version_end(const Bucket *bucket UNUSED) {
 
 
 void write_unlock_bucket(Bucket *bucket UNUSED) {
-#ifdef TABLE_CONCURRENT
   memory_barrier();
   assert((*(volatile uint32_t *)&bucket->version & 1U) == 1U);
-  // No need to use atomic add because this thread is the only one writing to version
-  (*(volatile uint32_t *)&bucket->version)++;
-#endif
+  // // No need to use atomic add because this thread is the only one writing to version
+  // (*(volatile uint32_t *)&bucket->version)++;
+	// assert(__sync_bool_compare_and_swap((volatile uint32_t *)&bucket->version, 0U, 1U));
+  __sync_fetch_and_add((volatile uint32_t *)&bucket->version, 1U);
 }
 
 // inline
@@ -96,6 +96,7 @@ Cbool try_find_insert_bucket(const Bucket *bucket_, uint32_t *slot,
                                                        ITEM_OFFSET(bucket_->item_vec[i]));
       if (key_eq(item->data, ITEMKEY_LENGTH(item->kv_length_vec), key, keylength)) {
         *slot = i;
+        // printf("%ld in hash and %ld come in\n",(uint64_t)(*(uint64_t *)item->data),(uint64_t)(*(uint64_t *)key));
         return false;
       }
     }

@@ -48,7 +48,7 @@ class HashTable
 private:
     /* hash table data */
 public:
-    TableBlock *table_blocks_[MAX_BLOCK_NUM - 1];//
+    TableBlock *table_blocks_[MAX_BLOCK_NUM];//
     // TableStats table_stats_;
     RoundHash *round_hash_;
     RoundHash *round_hash_new_;   // new group map used in resizing
