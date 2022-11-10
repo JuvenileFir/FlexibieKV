@@ -226,6 +226,7 @@ void RTWorker::worker_proc() {
     {
         nb_rx = rte_eth_rx_burst(port, t_id_, rx_buf, BURST_SIZE);
         core_statistics[core_id].rx += nb_rx;
+        m_piekv->log_->log_segments_[core_id]->table_stats_->rx_pkt_num +=nb_rx;
 
 #ifdef _DUMP_PKT
         auto pkt_content_dump = [&](struct rte_mbuf *pkt)

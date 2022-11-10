@@ -1,6 +1,7 @@
 #include "log.hpp"
 
 
+
 LogSegment::LogSegment(MemPool *mempool)
 {
     mempool_ = mempool;
@@ -10,6 +11,9 @@ LogSegment::LogSegment(MemPool *mempool)
 
     store_stats_ = new StoreStats();
     table_stats_ = new TableStats();
+    memset(store_stats_,0,sizeof(StoreStats));
+    memset(table_stats_,0,sizeof(TableStats));
+    
     
     blocknum_ = 0;
     usingblock_ = 0;
@@ -239,21 +243,19 @@ int64_t LogSegment::AllocItem(uint64_t item_size) {
                 // use next block
                 usingblock_++;
             } else {
-                // no free block left
                 usingblock_ = 0;
                 round_++;
+                for(uint32_t i = 0; i < blocknum_; i++)
+                    log_blocks_[i]->residue = mempool_->get_block_size();
                 printf("round:%d\n",round_);
                 // return -1;
             }
         }
         item_offset = offset_;
         offset_ += item_size;
-        if (round_) {
-            // if (offset_ > log_blocks_[usingblock_]->residue)
-            log_blocks_[usingblock_]->residue = std::max(offset_, log_blocks_[usingblock_]->residue);
-        } else {
-            log_blocks_[usingblock_]->residue -= item_size;
-        }
+        
+        log_blocks_[usingblock_]->residue -= item_size;
+        
         return item_offset;
         
     } else {

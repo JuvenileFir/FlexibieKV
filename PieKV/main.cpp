@@ -1,5 +1,7 @@
 #include "communication.hpp"
 
+struct timeval t0;                           
+size_t pre_count[4] = {0,0,0,0};
 
 struct rte_mempool *kRecv_mbuf_pool[THREAD_NUM];
 
@@ -183,6 +185,8 @@ int main(int argc, char *argv[]){
     }
     
     if (flow_mode == 3) workers.push_back(std::thread(&Piekv::memFlowingController, m_piekv));
+
+    workers.push_back(std::thread(&Piekv::print_trigger, m_piekv));
 
     // show_system_status(&mytable);
     // TODO: delete all new here and in signal

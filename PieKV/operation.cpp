@@ -1,5 +1,8 @@
 #include "piekv.hpp"
 
+extern size_t pre_count[4];
+extern struct timeval t0;                           
+
 MemPool *kMemPool;
 bool allow_mutation = false;
 
@@ -206,36 +209,16 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     uint64_t new_item_size = (uint32_t)(sizeof(LogItem) + ROUNDUP8(key_len) + ROUNDUP8(val_len));
     int64_t item_offset;
     item_offset = segmentToSet->AllocItem(new_item_size);
-    /* if (item_offset == -1) {
+    if (item_offset == -1) {
         unlock_two_buckets(bucket, tb);
-#ifdef EXP_LATENCY
-        auto end = std::chrono::steady_clock::now();
-#ifdef TRANSITION_ONLY
-        if (isTransitionPeriod)
-        {
-            printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-        }
-#else
-        printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-#endif
-#endif
+ 
         segmentToSet->table_stats_->set_fail += 1;
         return false;//return BATCH_FULL;
-    } else */
+    } else
     if (item_offset == -2)
     {
         unlock_two_buckets(bucket, tb);//???lock two buckets在cuckoo insert中
-#ifdef EXP_LATENCY
-        auto end = std::chrono::steady_clock::now();
-#ifdef TRANSITION_ONLY
-        if (isTransitionPeriod)
-        {
-            printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-        }
-#else
-        printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-#endif
-#endif
+
         segmentToSet->table_stats_->set_fail += 1;
         return false;//return BATCH_TOO_SMALL;
     }
@@ -322,6 +305,87 @@ void Piekv::move_to_head(Bucket* bucket, Bucket* located_bucket,
   } else {
     segmentToGet->table_stats_->move_to_head_skipped++;
   }
+}
+
+void Piekv::print_trigger() {
+    printf(" == [STAT] printer started on CORE 36 == \n");
+    
+    // bind memflowing thread to core 34
+    cpu_set_t mask;
+    CPU_ZERO(&mask);
+    CPU_SET(36, &mask);
+    if (pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask) < 0) {
+        fprintf(stderr, "[E] set thread affinity failed\n");
+    }
+    while (is_running_) {
+        gettimeofday(&t0, NULL);
+        uint64_t res[4];
+        double temp = (t0.tv_sec + t0.tv_usec / 1000000.0);
+        pre_count[0] = log_->log_segments_[0]->table_stats_->count
+                        +log_->log_segments_[1]->table_stats_->count
+                        +log_->log_segments_[2]->table_stats_->count
+                        +log_->log_segments_[3]->table_stats_->count;
+        // printf("former count:%ld\n",pre_count[0]);
+        pre_count[1] = log_->log_segments_[0]->table_stats_->get_found
+                        +log_->log_segments_[1]->table_stats_->get_found
+                        +log_->log_segments_[2]->table_stats_->get_found
+                        +log_->log_segments_[3]->table_stats_->get_found;
+        pre_count[2] = log_->log_segments_[0]->table_stats_->set_success
+                        +log_->log_segments_[1]->table_stats_->set_success
+                        +log_->log_segments_[2]->table_stats_->set_success
+                        +log_->log_segments_[3]->table_stats_->set_success;
+        pre_count[3] = log_->log_segments_[0]->table_stats_->rx_pkt_num
+                        +log_->log_segments_[1]->table_stats_->rx_pkt_num
+                        +log_->log_segments_[2]->table_stats_->rx_pkt_num
+                        +log_->log_segments_[3]->table_stats_->rx_pkt_num;
+        sleep(1);
+        gettimeofday(&t0, NULL);
+        double timediff = (t0.tv_sec + t0.tv_usec / 1000000.0) - temp;
+        res[0] = log_->log_segments_[0]->table_stats_->count
+                                                +log_->log_segments_[1]->table_stats_->count
+                                                +log_->log_segments_[2]->table_stats_->count
+                                                +log_->log_segments_[3]->table_stats_->count
+                                                - pre_count[0];
+        res[1] = log_->log_segments_[0]->table_stats_->get_found
+                                                +log_->log_segments_[1]->table_stats_->get_found
+                                                +log_->log_segments_[2]->table_stats_->get_found
+                                                +log_->log_segments_[3]->table_stats_->get_found
+                                                - pre_count[1];
+        res[2] = log_->log_segments_[0]->table_stats_->set_success
+                                                +log_->log_segments_[1]->table_stats_->set_success
+                                                +log_->log_segments_[2]->table_stats_->set_success
+                                                +log_->log_segments_[3]->table_stats_->set_success
+                                                - pre_count[2];
+        res[3] = log_->log_segments_[0]->table_stats_->rx_pkt_num
+                                                +log_->log_segments_[1]->table_stats_->rx_pkt_num
+                                                +log_->log_segments_[2]->table_stats_->rx_pkt_num
+                                                +log_->log_segments_[3]->table_stats_->rx_pkt_num
+                                                - pre_count[3];
+        if (res[3])  printf("\n[P]rx pkt num:            %7.3lf /s\n", res[3] / timediff );
+        if (res[0])  printf("\n[P]count:                 %7.3lf /s\n", res[0] / timediff );
+        if (res[1])  printf("\n[P]get found:             %7.3lf /s\n", res[1] / timediff );
+        if (res[2])  printf("\n[P]set success:           %7.3lf /s\n", res[2] / timediff );
+        if (res[0]||res[1]||res[2]) printf("\n----------------------------------\n"); 
+
+        pre_count[0] = log_->log_segments_[0]->table_stats_->count
+                        +log_->log_segments_[1]->table_stats_->count
+                        +log_->log_segments_[2]->table_stats_->count
+                        +log_->log_segments_[3]->table_stats_->count;
+        pre_count[1] = log_->log_segments_[0]->table_stats_->get_found
+                        +log_->log_segments_[1]->table_stats_->get_found
+                        +log_->log_segments_[2]->table_stats_->get_found
+                        +log_->log_segments_[3]->table_stats_->get_found;
+        pre_count[2] = log_->log_segments_[0]->table_stats_->set_success
+                        +log_->log_segments_[1]->table_stats_->set_success
+                        +log_->log_segments_[2]->table_stats_->set_success
+                        +log_->log_segments_[3]->table_stats_->set_success;
+        pre_count[3] = log_->log_segments_[0]->table_stats_->rx_pkt_num
+                        +log_->log_segments_[1]->table_stats_->rx_pkt_num
+                        +log_->log_segments_[2]->table_stats_->rx_pkt_num
+                        +log_->log_segments_[3]->table_stats_->rx_pkt_num;            
+// printf("latter count: %ld\n",pre_count[0]);
+
+    }
 }
 
 /*

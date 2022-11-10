@@ -61,6 +61,7 @@ public:
     void get_log(uint8_t *out_value, uint32_t *in_out_value_length, const uint32_t block_id, uint64_t log_offset);
     uint64_t get_tail();
     void print_table_stats();
+    void print_trigger(size_t t_id);
 };
 
 

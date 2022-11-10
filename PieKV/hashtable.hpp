@@ -13,6 +13,7 @@ using namespace std;
 typedef struct TableStats
 {
     size_t count;
+    size_t rx_pkt_num;
     size_t set_nooverwrite;
     size_t set_success;
     size_t set_fail;
