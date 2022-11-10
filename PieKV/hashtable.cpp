@@ -16,7 +16,7 @@ HashTable::HashTable(MemPool* mempool) {
 	round_hash_ = new RoundHash(table_block_num_, 8);
   round_hash_new_ = new RoundHash(table_block_num_, 8);
 
-  for (int i = 0; i < MAX_BLOCK_NUM - 1; i++) {
+  for (int i = 0; i < MAX_BLOCK_NUM; i++) {
         // TODO: use max here for temp, create an init block function later
         table_blocks_[i] = new TableBlock;
     }
