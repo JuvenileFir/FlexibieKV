@@ -141,6 +141,8 @@ struct tablePosition cuckoo_insert(Bucket *partition, uint64_t keyhash, uint16_t
   if (res2 != ITEMS_PER_BUCKET) {
     return (tablePosition){tb.b2, res2, ok};
   }
+  /* res2 = random() % 7;
+  return (tablePosition){tb.b2, res2, ok}; */
 
   uint32_t insertbucket, insertslot;
   cuckooStatus st = run_cuckoo(partition, tb, &insertbucket, &insertslot);

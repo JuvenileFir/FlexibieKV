@@ -1,5 +1,9 @@
 #include "communication.hpp"
 
+struct timeval t0;                           
+double global_timebase;
+double global_timediff;
+size_t pre_count[4] = {0,0,0,0};
 
 struct rte_mempool *kRecv_mbuf_pool[THREAD_NUM];
 
@@ -164,7 +168,6 @@ int main(int argc, char *argv[]){
         }
     }
 
-    
     // std::signal(SIGINT, sigint_handler);
 
     port_init();
@@ -185,6 +188,8 @@ int main(int argc, char *argv[]){
     
     if (flow_mode == 3) workers.push_back(std::thread(&Piekv::memFlowingController, m_piekv));
 
+    workers.push_back(std::thread(&Piekv::print_trigger, m_piekv));
+
     // show_system_status(&mytable);
     // TODO: delete all new here and in signal
     int input = 123;
@@ -199,10 +204,12 @@ int main(int argc, char *argv[]){
         {
           m_piekv->log_->log_segments_[i]->print_table_stats();
           printf("\n\n");
-          printf("rx_queue_%d:%ld\n",i,core_statistics[i].rx);
-          printf("\n\n");
-
         }
+        /* for (int i = 0; i < 36; i++)
+        {
+          printf("[main]End rx_queue_%ld:%ld\n", i, core_statistics[i].rx);
+          printf("\n");
+        } */
         printf("[INFO] Everything works fine.\n");fflush(stdout);
         exit(EXIT_SUCCESS); 
       }

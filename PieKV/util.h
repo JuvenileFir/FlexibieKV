@@ -3,10 +3,14 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <cstddef>
+#include <cstdint>
+#include <cinttypes>
 #include <algorithm>
 
 #ifdef __cplusplus
@@ -182,5 +186,7 @@ static inline double mehcached_rand_d(uint64_t *state) {
   *state = (*state * 0x5deece66dUL + 0xbUL) & ((1UL << 48) - 1);
   return (double)*state / (double)((1UL << 48) - 1);
 }
+
+
 
 EXTERN_END

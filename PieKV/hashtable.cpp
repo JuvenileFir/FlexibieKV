@@ -16,10 +16,11 @@ HashTable::HashTable(MemPool* mempool) {
 	round_hash_ = new RoundHash(table_block_num_, 8);
   round_hash_new_ = new RoundHash(table_block_num_, 8);
 
-  for (int i = 0; i < MAX_BLOCK_NUM; i++) {
+  for (int i = 0; i < MAX_BLOCK_NUM - 1; i++) {
         // TODO: use max here for temp, create an init block function later
         table_blocks_[i] = new TableBlock;
     }
+
 	for (uint32_t i = 0; i < table_block_num_; i++) {
 		int32_t alloc_id = mempool->alloc_block();
 		assert(alloc_id + 1); 
@@ -27,6 +28,7 @@ HashTable::HashTable(MemPool* mempool) {
 		table_blocks_[i]->block_ptr = mempool->get_block_ptr(alloc_id);
 		mempool->memset_block(alloc_id);
 	}
+
 }
 
 HashTable::~HashTable() {

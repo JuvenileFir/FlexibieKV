@@ -1,6 +1,7 @@
 #include "log.hpp"
 
 
+
 LogSegment::LogSegment(MemPool *mempool)
 {
     mempool_ = mempool;
@@ -230,19 +231,15 @@ int64_t LogSegment::AllocItem(uint64_t item_size) {
 
     int64_t item_offset;
     if (item_size <= BATCH_SIZE) {
-           if(log_blocks_[usingblock_]->residue < 100) printf("residue:%d\titem_size:%ld\n",log_blocks_[usingblock_]->residue,item_size);
 
-        if (log_blocks_[usingblock_]->residue < item_size) {//仅触发一次？
+        if (log_blocks_[usingblock_]->residue < item_size) {
             // block in use is already filled up 
             // check if there is free block left
-                printf("usingblock_:%d\tblocknum_:%d\n",usingblock_,blocknum_);
-
             offset_ = 0;
             if (usingblock_ < blocknum_ - 1) {
                 // use next block
                 usingblock_++;
             } else {
-                // no free block left
                 usingblock_ = 0;
                 round_++;
                 printf("round:%d\n",round_);
