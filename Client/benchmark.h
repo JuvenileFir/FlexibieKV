@@ -11,6 +11,7 @@
 #define MEGA_PKT_END 0xFFFF
 #define MEGA_JOB_GET 0x2
 #define MEGA_JOB_SET 0x3
+#define MEGA_JOB_THREAD 0x4
 // #define MEGA_JOB_DEL 0x4 // TODO: To be implemented
 
 /* BITS_INSERT_BUF should be same with mega: config->bits_insert_buf */
@@ -26,6 +27,9 @@
 #define SET_RESPOND_LEN 2U
 #define SET_SUCC 0x13
 #define SET_FAIL 0x23
+#define GET_THREAD 0x2f
+
+
 
 #define GET_RESPOND_TYPE_LEN 2U
 #define GET_SUCC 0x12
@@ -44,7 +48,7 @@
 #define ZIPF_THETA 0.99
 #define AFFINITY_MAX_QUEUE 1
 /* Core Affinity, zipf distribution needs more cores for calculation */
-#define NUM_QUEUE (7U)
+#define NUM_QUEUE (4U)
 #elif defined(DIS_UNIFORM)
 #define ZIPF_THETA 0.00
 #define AFFINITY_ONE_NODE 1
@@ -60,13 +64,13 @@
 #define PER_THREAD_CNT (uint64_t)((TOTAL_CNT - PRELOAD_CNT) / NUM_QUEUE) //每线程去掉perload的平均count
 
 // #define KV_LEN_8
-// #define KV_LEN_16
+#define KV_LEN_16
 // #define KV_LEN_24
 // #define KV_LEN_32
 // #define KV_LEN_40
 // #define KV_LEN_48
 // #define KV_LEN_56
-#define KV_LEN_64
+// #define KV_LEN_64
 // #define KV_LEN_1024
 
 #if defined(KV_LEN_8)
