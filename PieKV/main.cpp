@@ -43,7 +43,6 @@ void addSignal(Signal& sigset, Args... args) {
 
 void port_init() {
   unsigned nb_ports;
-  printf("enter the port\n");
   /* Initialize the Environment Abstraction Layer (EAL). */
   int t_argc = 8;
   char *t_argv[] = {(char *)"./build/benchmark",
@@ -177,7 +176,7 @@ int main(int argc, char *argv[]){
     // show_system_status(&mytable);
     RTWorker *m_rtworkers[4];
 
-    printf(" == [STAT] Workers Start (%d threads in total) == \n", THREAD_NUM);
+    printf("[STAT] Workers Start (%d threads in total)\n", THREAD_NUM);
     size_t id;
     // GetThread();
     for (id = 0; id < THREAD_NUM; id++) {
@@ -226,7 +225,7 @@ int main(int argc, char *argv[]){
         timer->showTime();
         // timer->clear();
         for (int i = 0; i < 4; i++) {
-          printf("thread %d rx: %d\n",i,core_statistics[i].rx);
+          printf("thread %d rx: %ld\n",i,core_statistics[i].rx);
         }
         m_piekv->showUtilization();
       }

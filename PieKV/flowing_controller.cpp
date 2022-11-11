@@ -26,9 +26,9 @@ void Piekv::showUtilization()
     double total_mem_utilization = 
         vaild_percentage * (log_->total_blocknum_ / total_block_num) 
             + load_factor * (hashtable_->table_block_num_ / total_block_num);
-    printf("[STATUS] Log   Memory utilization: %d / %d = %f %\n", store_load, store_capa, vaild_percentage);
-    printf("[STATUS] Index Memory utilization: %d / %d = %f %\n", index_load, index_capa, load_factor);
-    printf("[STATUS] Total Memory utilization: %f\n", total_mem_utilization);
+    printf("[STATUS] Log   Memory utilization: %ld / %ld = %f %%\n", store_load, store_capa, vaild_percentage);
+    printf("         Index Memory utilization: %ld / %ld = %f %%\n", index_load, index_capa, load_factor);
+    printf("         Total Memory utilization: %f %%\n", total_mem_utilization);
 
     // for (int i = 0; i < hashtable_->table_block_num_; i++) {
     //     TableBlock *block = hashtable_->table_blocks_[i];
@@ -54,7 +54,7 @@ void Piekv::showUtilization()
 void Piekv::memFlowingController()
 {
 
-    printf(" == [STAT] Memory flowing controler started on CORE 34 == \n");
+    printf("[STAT] Memory flowing controler started on CORE 34\n");
     
     // bind memflowing thread to core 34
     cpu_set_t mask;
@@ -97,8 +97,8 @@ void Piekv::memFlowingController()
         store_capa = log_->total_blocknum_ * mempool_->get_block_size();
         index_capa = hashtable_->table_block_num_ * BUCKETS_PER_PARTITION * ITEMS_PER_BUCKET;
     
-        vaild_percentage = store_load * factor / store_capa;
-        load_factor = index_load * factor / index_capa;
+        vaild_percentage = store_load * factor / store_capa * 100;
+        load_factor = index_load * factor / index_capa * 100;
 
         int total_block_num = log_->total_blocknum_ + hashtable_->table_block_num_;
         double total_mem_utilization = 
@@ -110,11 +110,11 @@ void Piekv::memFlowingController()
             // printf("[STATUS] store load: %d  store capa: %d\n",store_load,store_capa);
             // printf("[STATUS] index load: %d  index capa: %d\n",index_load,index_capa);
             // printf("[STATUS] load_factor: %f  valid_percentage: %f\n",load_factor,vaild_percentage);
-            printf("[STATUS] Log   Memory utilization: %ld / %ld = %f \n", store_load, store_capa, vaild_percentage);
-            printf("[STATUS] Index Memory utilization: %ld / %ld = %f \n", index_load, index_capa, load_factor);
-            printf("[STATUS] Total Memory utilization: %f \n", total_mem_utilization);
+            printf("\n[STATUS] H2L Log   Memory utilization: %ld / %ld = %f %%\n", store_load, store_capa, vaild_percentage);
+            printf("             Index Memory utilization: %ld / %ld = %f %%\n", index_load, index_capa, load_factor);
+            printf("             Total Memory utilization: %f %%\n\n", total_mem_utilization);
             
-            PRINT_EXCECUTION_TIME("  === [STAT] H2L is executed by Daemon === ", H2L(1));
+            PRINT_EXCECUTION_TIME("[STAT] H2L is executed by Daemon", H2L(1));
             #ifdef MULTIPLE_SHIFT
                 int segment_num = table->num_partitions;
                 printf("         segment num: %d\n", segment_num);
@@ -134,11 +134,11 @@ void Piekv::memFlowingController()
             // printf("[STATUS] store load: %d  store capa: %d\n",store_load,store_capa);
             // printf("[STATUS] index load: %d  index capa: %d\n",index_load,index_capa);
             // printf("[STATUS] load_factor: %f  valid_percentage: %f\n",load_factor,vaild_percentage);
-            printf("[STATUS] Log   Memory utilization: %ld / %ld = %f \n", store_load, store_capa, vaild_percentage);
-            printf("[STATUS] Index Memory utilization: %ld / %ld = %f \n", index_load, index_capa, load_factor);
-            printf("[STATUS] Total Memory utilization: %f \n", total_mem_utilization);
+            printf("[STATUS] (L2H) Log   Memory utilization: %ld / %ld = %f %%\n", store_load, store_capa, vaild_percentage);
+            printf("             Index Memory utilization: %ld / %ld = %f %%\n", index_load, index_capa, load_factor);
+            printf("             Total Memory utilization: %f %%\n", total_mem_utilization);
             
-            PRINT_EXCECUTION_TIME("  === [STAT] L2H is executed by Daemon === ", L2H(1));
+            PRINT_EXCECUTION_TIME("[STAT] L2H is executed by Daemon", L2H(1));
             #ifdef MULTIPLE_SHIFT
                 int segment_num = table->num_partitions;
                 printf("         segment num: %d\n", segment_num);
@@ -168,7 +168,7 @@ bool Piekv::H2L(size_t blocknum_to_move)
         return false;
     }
 
-    printf("[ARGS](H2L) to_shrink = %zu\t log = %u\t partition = %u\n", blocknum_to_move, log_->total_blocknum_,
+    printf("[ARGS] H2L to_shrink = %zu\t log = %u\t partition = %u\n", blocknum_to_move, log_->total_blocknum_,
             hashtable_->table_block_num_);
 
 
@@ -191,7 +191,7 @@ bool Piekv::L2H(size_t blocknum_to_move)
         printf("Too few memory hold by log for expanding Hash table\n");
         return false;
     }
-    printf("[ARGS](L2H) to_shrink = %zu\t log = %u\t partition = %u\n", blocknum_to_move, log_->total_blocknum_,
+    printf("[ARGS] L2H to_shrink = %zu\t log = %u\t partition = %u\n", blocknum_to_move, log_->total_blocknum_,
             hashtable_->table_block_num_);
 
 

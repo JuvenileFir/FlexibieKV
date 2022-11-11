@@ -121,7 +121,8 @@ bool Piekv::set_check(uint64_t key_hash, const uint8_t *key, size_t key_length) 
   return true;
 }
 
-bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
+bool Piekv::set(size_t t_id, uint64_t key_hash, 
+                const uint8_t *key, uint32_t key_len,
                 uint8_t *val, uint32_t val_len, bool overwrite) {
     assert(key_len <= MAX_KEY_LENGTH);
     assert(val_len <= MAX_VALUE_LENGTH);
@@ -309,7 +310,7 @@ void Piekv::move_to_head(Bucket* bucket, Bucket* located_bucket,
 }
 
 void Piekv::print_trigger() {
-    printf(" == [STAT] printer started on CORE 36 == \n");
+    printf("[STAT] printer started on CORE 36\n");
     
     // bind memflowing thread to core 34
     cpu_set_t mask;
@@ -362,11 +363,12 @@ void Piekv::print_trigger() {
                                                 +log_->log_segments_[2]->table_stats_->rx_pkt_num
                                                 +log_->log_segments_[3]->table_stats_->rx_pkt_num
                                                 - pre_count[3];
-        if (res[3])  printf("\n[P]rx pkt num:            %7.3lf /s\n", res[3] / timediff );
-        if (res[0])  printf("\n[P]count:                 %7.3lf /s\n", res[0] / timediff );
-        if (res[1])  printf("\n[P]get found:             %7.3lf /s\n", res[1] / timediff );
-        if (res[2])  printf("\n[P]set success:           %7.3lf /s\n", res[2] / timediff );
-        if (res[0]||res[1]||res[2]) printf("\n----------------------------------\n"); 
+        if (res[0]||res[1]||res[2]||res[3]) printf("\n----------------------------------\n"); 
+        if (res[3])  printf("\n[PERF]rx pkt num:            %7.3lf /s\n", res[3] / timediff );
+        if (res[0])  printf("\n[PERF]count:                 %7.3lf /s\n", res[0] / timediff );
+        if (res[1])  printf("\n[PERF]get found:             %7.3lf /s\n", res[1] / timediff );
+        if (res[2])  printf("\n[PERF]set success:           %7.3lf /s\n", res[2] / timediff );
+        if (res[0]||res[1]||res[2]||res[3]) printf("\n----------------------------------\n"); 
 
         pre_count[0] = log_->log_segments_[0]->table_stats_->count
                         +log_->log_segments_[1]->table_stats_->count
@@ -384,8 +386,9 @@ void Piekv::print_trigger() {
                         +log_->log_segments_[1]->table_stats_->rx_pkt_num
                         +log_->log_segments_[2]->table_stats_->rx_pkt_num
                         +log_->log_segments_[3]->table_stats_->rx_pkt_num;
+        printf("\n");
         this->showUtilization();        
-// printf("latter count: %ld\n",pre_count[0]);
+        printf("\n");
 
     }
 }
