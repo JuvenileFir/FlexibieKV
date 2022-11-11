@@ -5,9 +5,10 @@
 #include "mempool.hpp"
 #include "util.h"
 
-#define TAG_MASK (((uint64_t)1 << 15) - 1)
-#define TAG(item_vec) ((item_vec) >> 48)
-
+#define TAG_MASK (((uint64_t)1 << 8) - 1)
+#define TAG(item_vec) ((item_vec) >> 56)
+#define ROUND_MASK (0x00ff000000000000UL)
+#define ROUND(item_vec) ((item_vec & ROUND_MASK) >> 48)
 #define PAGE_MASK (0x0000fffff8000000UL)
 #define PAGE(item_vec) ((item_vec & PAGE_MASK) >> 27)
 #define SET_PAGE(entry, pageNumber) (((uint64_t)entry) | ((uint64_t)pageNumber) << 27)
@@ -15,8 +16,8 @@
 #define ITEM_OFFSET_MASK (((uint64_t)1 << 27) - 1)
 #define ITEM_OFFSET(item_vec) ((item_vec)&ITEM_OFFSET_MASK)
 
-#define ITEM_VEC(tag, pageNumber, item_offset) \
-  (((uint64_t)(tag) << 48) | ((uint64_t)(pageNumber) << 27) | (uint64_t)(item_offset))
+#define ITEM_VEC(tag, round, pageNumber, item_offset) \
+  (((uint64_t)(tag) << 56) | ((uint64_t)(round) << 48) | ((uint64_t)(pageNumber) << 27) | (uint64_t)(item_offset))
 
 
 typedef enum cuckooStatus {

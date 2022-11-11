@@ -1,6 +1,28 @@
 #include "piekv.hpp"
 
 
+void HashTable::showHashTableStatus()
+{
+    int round[30];
+    for (int i = 0; i < 30; i++) {
+        round[i] = 0;
+    }
+    for (int i = 0; i < table_block_num_; i++) {
+        Bucket *block = (Bucket *)get_block_ptr(i);
+        for (int j = 0; j < mempool_->get_block_size() / 64 - 1; j++) {
+            Bucket *bucket = &block[j];
+            for (int z = 0; z < 7; z++) {
+                int thisRound = ROUND(bucket->item_vec[z]);
+                if (thisRound < 0) exit(-1);
+                round[thisRound] += 1;
+            }
+        }
+    }
+    for (int i = 0; i < 30; i++) {
+        printf("[STATUS] round %d: %d\n", i, round[i]);
+    }
+}
+
 void Piekv::showUtilization()
 {
     size_t store_load = 0;

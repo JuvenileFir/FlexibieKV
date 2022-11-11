@@ -77,5 +77,7 @@ public:
 
     void redistribute_last_short_group(size_t *parts, size_t count);
     void redistribute_first_long_group(size_t *parts, size_t count);
+    
+    void showHashTableStatus();
 
 };

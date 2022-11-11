@@ -29,10 +29,6 @@ bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key,
                 uint32_t *in_out_value_length) {
 
     LogSegment *segmentToGet = log_->log_segments_[t_id];
-   #ifdef EXP_LATENCY
-    Cbool isTransitionPeriod = hashtable_->is_flexibling_;
-    auto start = std::chrono::steady_clock::now();
-    #endif
     uint32_t block_index = hashtable_->round_hash_->HashToBucket(key_hash);
     Bucket *bucket = (Bucket *)hashtable_->get_block_ptr(block_index);  
 
@@ -51,10 +47,21 @@ bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key,
             segmentToGet->table_stats_->get_notfound += 1;
             return false;
         }
+        uint32_t round = ROUND(item_vec);
         uint32_t block_id = PAGE(item_vec);
         uint64_t item_offset = ITEM_OFFSET(item_vec);
         // segmentToGet->get_log(out_value,in_out_value_length,block_id,item_offset);
 
+        if (round + 1 < segmentToGet->round_) {
+            segmentToGet->table_stats_->test_notfound += 1;
+            return false;
+        }
+        else if (round < segmentToGet->round_) {
+            if(segmentToGet->get_log_block_id(block_id) <= segmentToGet->usingblock_ + 1) {
+                segmentToGet->table_stats_->test_notfound += 1;
+                return false;
+            }
+        }
         LogItem *item = segmentToGet->locateItem(block_id, item_offset);
         
         size_t key_length = 
@@ -77,16 +84,6 @@ bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key,
 
         break;
     }
-    #ifdef EXP_LATENCY
-    auto end = std::chrono::steady_clock::now();
-    #ifdef TRANSITION_ONLY
-    if (isTransitionPeriod) {
-        printf("GET(succ): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-    }
-    #else
-    printf("GET(succ): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-    #endif
-    #endif
     return true;
 }
 
@@ -187,15 +184,21 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
         size_t old_value_length = 
             std::min(ITEMVALUE_LENGTH(item->kv_length_vec), (uint32_t)MAX_VALUE_LENGTH);
         
-        if (!val_eq(val,val_len,item->data + ROUNDUP8(key_length),old_value_length)) {
-            if (val_len <= old_value_length){
-                memcpy8(item->data + ROUNDUP8(key_length), val, val_len);
-                unlock_two_buckets(bucket, tb);
-                segmentToSet->table_stats_->set_inplace += 1;
-                return true;
-            }
-        }
-        else {
+        // if (!val_eq(val,val_len,item->data + ROUNDUP8(key_length),old_value_length)) {
+        //     if (val_len <= old_value_length){
+        //         memcpy8(item->data + ROUNDUP8(key_length), val, val_len);
+        //         unlock_two_buckets(bucket, tb);
+        //         segmentToSet->table_stats_->set_inplace += 1;
+        //         return true;
+        //     }
+        // }
+        // else {
+        //     unlock_two_buckets(bucket, tb);
+        //     segmentToSet->table_stats_->set_fail += 1;
+        //     return false;
+        // }
+
+        if (val_eq(val,val_len,item->data + ROUNDUP8(key_length),old_value_length)) {
             unlock_two_buckets(bucket, tb);
             segmentToSet->table_stats_->set_fail += 1;
             return false;
@@ -236,7 +239,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
 
     segmentToSet->set_item(new_item, key_hash, key, (uint32_t)key_len, val, (uint32_t)val_len, VALID);
     
-    located_bucket->item_vec[tp.slot] = ITEM_VEC(tag, block_id, item_offset);
+    located_bucket->item_vec[tp.slot] = ITEM_VEC(tag, segmentToSet->round_, block_id, item_offset);
 
     unlock_two_buckets(bucket, tb);
     if (!(tp.cuckoostatus == 6 || tp.cuckoostatus == 3))
@@ -271,8 +274,9 @@ void Piekv::move_to_head(Bucket* bucket, Bucket* located_bucket,
             uint32_t block_id = segmentToGet->get_block_id(segmentToGet->usingblock_);
             LogItem *new_item = (LogItem *)segmentToGet->locateItem(block_id, new_item_offset);
             memcpy8((uint8_t*)new_item, (const uint8_t*)item, new_item_size);
-    
-            located_bucket->item_vec[item_index] = ITEM_VEC(TAG(item_vec), block_id, new_item_offset);
+
+            int temp_round = 0;
+            located_bucket->item_vec[item_index] = ITEM_VEC(TAG(item_vec), temp_round, block_id, new_item_offset);
 
             // success
             segmentToGet->table_stats_->move_to_head_performed++;
@@ -379,76 +383,3 @@ void Piekv::print_trigger() {
 
     }
 }
-
-/*
-
-
-bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t* key,uint32_t key_len, uint8_t* val, uint32_t val_len, bool overwrite)
-{
-    printf("[INFO]set 1\n");
-    printf("[INFO] tid: %d\n",t_id);
-    LogSegment *segmentToSet = log_->log_segments_[t_id];
-    printf("[INFO]set 1.01\n");
-    static int prt = 0;
-    Cbool ret;
-    ret = set_check(key_hash, key, key_len);
-    uint16_t tag = calc_tag(key_hash);
-    if (ret) return false;  // Alreagdy exists.
-    printf("[INFO]set 2\n");
-    uint32_t block_index = hashtable_->round_hash_->HashToBucket(key_hash);
-    Bucket *bucket = (Bucket *)hashtable_->get_block_ptr(block_index);
-    printf("[INFO]set 3\n");
-    assert(key_len <= MAX_KEY_LENGTH);
-    assert(val_len <= MAX_VALUE_LENGTH);
-printf("bucket version %d in set\n",bucket->version);
-    tablePosition *tp = (tablePosition *)malloc(sizeof(tablePosition));
-    twoBucket tb = cal_two_buckets(key_hash);
-    printf("[INFO]set 4\n");
-    #ifdef EXP_LATENCY
-    Cbool isTransitionPeriod = table->is_flexibling;
-    auto start = std::chrono::steady_clock::now();
-    #endif
-    Bucket *located_bucket;
-    // Cbool overwriting = false;
-    printf("[INFO]set 5\n");
-
-    int64_t ptr = hashtable_->set_table(tp, tb, key_hash, key, key_len);
-    if (ptr == -1){
-        return FAILURE_HASHTABLE_FULL;
-    } else if (ptr == -2){
-        return FAILURE_ALREADY_EXIST;
-    } else {
-        located_bucket =(Bucket *)ptr;
-    }
-    printf("bucket version %d in after set table\n",bucket->version);
-    printf("[INFO]set 6\n");
-    uint64_t new_item_size = (uint32_t)(sizeof(LogItem) + ROUNDUP8(key_len) + ROUNDUP8(val_len));
-    int64_t item_offset;
-
-    printf("[INFO]set 7\n");
-    int64_t block_id = segmentToSet->set_log(key_hash, key, (uint32_t)key_len, val, (uint32_t)val_len, VALID);
-
-    located_bucket->item_vec[tp->slot] = ITEM_VEC(tag, block_id, item_offset);
-    printf("[INFO]set 8\n");
-    printf("bucket version %d before unlock\n",bucket->version);
-    unlock_two_buckets(bucket, *tb);
-    segmentToSet->table_stats_->count += 1;
-
-    #ifdef EXP_LATENCY
-    auto end = std::chrono::steady_clock::now();
-    #ifdef TRANSITION_ONLY
-    if (isTransitionPeriod) {
-        printf("SET(succ): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-    }
-    #else
-    printf("SET(succ): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-    #endif
-    #endif
-    return SUCCESS_SET;
-}
-
-
-
-
-
-*/

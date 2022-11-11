@@ -233,6 +233,9 @@ int main(int argc, char *argv[]){
       if (input == 3) {
         timer->showCount();
       }
+      if (input == 4) {
+        m_piekv->hashtable_->showHashTableStatus();
+      }
     }
 
 

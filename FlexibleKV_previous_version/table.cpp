@@ -186,8 +186,8 @@ fkvStatus set(int32_t batchid, struct hash_table *table, SlabStore *store, uint6
 #endif
   new_item->item_size = new_item_size;
   set_item(new_item, key_hash, key, (uint32_t)key_length, value, (uint32_t)value_length, expire_time);
-
-  located_bucket->item_vec[tp.slot] = ITEM_VEC(tag, page_number, item_offset);
+  int temp_round = 0;
+  located_bucket->item_vec[tp.slot] = ITEM_VEC(tag, temp_round, page_number, item_offset);
 
 #ifdef _CUCKOO_
   unlock_two_buckets(partition, tb);

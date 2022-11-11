@@ -210,6 +210,14 @@ uint32_t LogSegment::get_block_id(uint32_t log_index) {
     return log_blocks_[log_index]->block_id;
 }
 
+uint32_t LogSegment::get_log_block_id(uint32_t mem_block_id) {
+    for (int i = 0; i < blocknum_; i++) {
+        if (log_blocks_[i]->block_id == mem_block_id)
+            return i;
+    }
+    return -1;
+}
+
 void LogSegment::set_item(struct LogItem *item, uint64_t key_hash, const uint8_t *key, uint32_t key_length, const uint8_t *value,uint32_t value_length, uint32_t expire_time) 
 {
   assert(key_length <= ITEMKEY_MASK);
