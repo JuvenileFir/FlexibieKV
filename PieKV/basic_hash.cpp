@@ -51,6 +51,10 @@ Cbool key_eq(const uint8_t *key1, size_t key1_len, const uint8_t *key2, size_t k
   return key1_len == key2_len && memcmp8(key1, key2, key1_len);
 }
 
+Cbool val_eq(const uint8_t *val1, size_t val1_len, const uint8_t *val2, size_t val2_len) {
+  return val1_len == val2_len && memcmp8(val1, val2, val1_len);
+}
+
 uint16_t try_read_from_bucket(const Bucket *bucket, const uint16_t tag, const uint8_t *key, uint32_t keylength) {
   uint32_t slot;
   for (slot = 0; slot < ITEMS_PER_BUCKET; slot++) {

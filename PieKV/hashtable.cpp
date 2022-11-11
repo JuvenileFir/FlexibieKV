@@ -168,20 +168,10 @@ int64_t HashTable::set_table(tablePosition *tp, twoBucket *tb, uint64_t key_hash
   uint32_t block_index = round_hash_->HashToBucket(key_hash);
   Bucket *bucket = (Bucket *)this->get_block_ptr(block_index);
 
-  while (1) {
-    uint8_t v = (*(volatile uint8_t *)&bucket->lock) & ~((uint8_t)1);//8bit向下取偶数
-    uint8_t new_v = v + (uint8_t)2;
-    if (__sync_bool_compare_and_swap((volatile uint8_t *)&bucket->lock, v, new_v))
-      break;
-  }
 
   tablePosition tps = cuckoo_insert(bucket, key_hash, tag, *tb, key, key_length);
 
   tp = &tps;
-
-  // memory_barrier();
-  assert((*(volatile uint8_t *)&bucket->lock) > 1);
-  __sync_fetch_and_sub((volatile uint8_t *)&bucket->lock, (uint8_t)2);
 
   if (tp->cuckoostatus == failure_table_full) {
     // TODO: support eviction
@@ -233,12 +223,6 @@ void HashTable::redistribute_last_short_group(size_t *parts, size_t count) {
   struct twoBucket tb;
   while (k >= 0) {
     buckets = (Bucket *)(this->get_block_ptr(parts[k]));
-
-    while (1) {
-      // wait for the first bucket lock
-      // Q: why wait here? why not wait per bucket?
-			if (__sync_bool_compare_and_swap((volatile uint8_t *)&(buckets->lock), (uint8_t)0, (uint8_t)1))   break;
-		}
 
     /* Go through the entire bucket blindly */
     for (bucket_index = 0; bucket_index <= BUCKETS_PER_PARTITION; bucket_index++) {
@@ -303,9 +287,6 @@ void HashTable::redistribute_last_short_group(size_t *parts, size_t count) {
       }
       write_unlock_bucket(&buckets[bucket_index]);
     }
-    // memory_barrier();
-    assert((*(volatile uint8_t *)&buckets->lock & (uint8_t)1) == (uint8_t)1);
-    __sync_fetch_and_sub((volatile uint8_t *)&(buckets->lock), (uint8_t)1);
     k--;
   }
 }
@@ -324,11 +305,6 @@ void HashTable::redistribute_first_long_group(size_t *parts, size_t count) {
   while (k < count) {
     bucket = (Bucket *)(this->get_block_ptr(parts[k]));
     // Go through the entire bucket blindly
-		while (1) {
-			if (__sync_bool_compare_and_swap((volatile uint8_t *)&(bucket->lock),
-																			 (uint8_t)0, (uint8_t)1))
-				break;
-		}
     for (bucket_index = 0; bucket_index <= BUCKETS_PER_PARTITION; bucket_index++) {
       write_lock_bucket(&bucket[bucket_index]);
       for (entry_index = 0; entry_index < ITEMS_PER_BUCKET; entry_index++) {
@@ -367,8 +343,6 @@ void HashTable::redistribute_first_long_group(size_t *parts, size_t count) {
       write_unlock_bucket(&bucket[bucket_index]);
     }
     // memory_barrier();
-    assert((*(volatile uint8_t *)&bucket->lock & (uint8_t)1) == (uint8_t)1);
-    __sync_fetch_and_sub((volatile uint8_t *)&(bucket->lock), (uint8_t)1);
     k++;
   }
 }

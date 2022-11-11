@@ -67,7 +67,7 @@ bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key,
         
         if (!is_snapshots_same(*ts1, read_two_buckets_end(bucket, *tb))) continue;
         segmentToGet->table_stats_->get_found += 1;
-        segmentToGet->table_stats_->count += 1;
+        // segmentToGet->table_stats_->count += 1;
 
         item_offset += block_id * mempool_->get_block_size();
         if (allow_mutation)
@@ -153,20 +153,11 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
      * is the possibility for losing slot(s). So locking the bucket with FIFO
      * policy is the simplest way.
      */
-    while (1) {
-        uint8_t v = *(volatile uint8_t *)&bucket->lock & ~((uint8_t)1);
-        uint8_t new_v = v + (uint8_t)2;
-        if (__sync_bool_compare_and_swap((volatile uint8_t *)&bucket->lock, v, new_v))
-            break;
-    }
 
     twoBucket tb = cal_two_buckets(key_hash);
     lock_two_buckets(bucket, tb);
     tablePosition tp = cuckoo_insert(bucket, key_hash, tag, tb, key, key_len);
 
-    // memory_barrier();
-    assert((*(volatile uint8_t *)&bucket->lock) > 1);
-    __sync_fetch_and_sub((volatile uint8_t *)&(bucket->lock), (uint8_t)2);
     if (tp.cuckoostatus == failure_table_full)
     {
         // TODO: support eviction
@@ -188,22 +179,33 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     {
         // TODO: support overwrite
         // overwriting = true;
-        unlock_two_buckets(bucket, tb);
-#ifdef EXP_LATENCY
-        auto end = std::chrono::steady_clock::now();
-#ifdef TRANSITION_ONLY
-        if (isTransitionPeriod)
-        {
-            printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
+        Bucket *located_bucket = &bucket[tp.bucket];
+        LogItem *item = (LogItem *)kMemPool->locate_item(PAGE(located_bucket->item_vec[tp.slot]),
+                                                       ITEM_OFFSET(located_bucket->item_vec[tp.slot]));
+        size_t key_length = 
+            std::min(ITEMKEY_LENGTH(item->kv_length_vec), (uint32_t)MAX_KEY_LENGTH);
+        size_t old_value_length = 
+            std::min(ITEMVALUE_LENGTH(item->kv_length_vec), (uint32_t)MAX_VALUE_LENGTH);
+        
+        if (!val_eq(val,val_len,item->data + ROUNDUP8(key_length),old_value_length)) {
+            if (val_len <= old_value_length){
+                memcpy8(item->data + ROUNDUP8(key_length), val, val_len);
+                unlock_two_buckets(bucket, tb);
+                segmentToSet->table_stats_->set_inplace += 1;
+                return true;
+            }
         }
-#else
-        printf("SET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-#endif
-#endif
-        segmentToSet->table_stats_->set_fail += 1;
-        return false;//return FAILURE_ALREADY_EXIST;
+        else {
+            unlock_two_buckets(bucket, tb);
+            segmentToSet->table_stats_->set_fail += 1;
+            return false;
+        }
+
+
+        // segmentToSet->table_stats_->set_fail += 1;
+        // return false;//return FAILURE_ALREADY_EXIST;
     }
-    if (!((tp.cuckoostatus == 0 ) || (tp.cuckoostatus == 6))) assert(0);
+    // if (!((tp.cuckoostatus == 0 ) || (tp.cuckoostatus == 6))) assert(0);
     struct Bucket *located_bucket = &bucket[tp.bucket];
 
     uint64_t new_item_size = (uint32_t)(sizeof(LogItem) + ROUNDUP8(key_len) + ROUNDUP8(val_len));
@@ -237,22 +239,10 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     located_bucket->item_vec[tp.slot] = ITEM_VEC(tag, block_id, item_offset);
 
     unlock_two_buckets(bucket, tb);
-    if (tp.cuckoostatus != 6)
+    if (!(tp.cuckoostatus == 6 || tp.cuckoostatus == 3))
         segmentToSet->table_stats_->count += 1;
 
     //cleanup_bucket(item_offset,new_tail); TODO!
-
-#ifdef EXP_LATENCY
-    auto end = std::chrono::steady_clock::now();
-#ifdef TRANSITION_ONLY
-    if (isTransitionPeriod)
-    {
-        printf("SET(succ): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-    }
-#else
-    printf("SET(succ): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-#endif
-#endif
     return true;
 }
 
@@ -384,7 +374,7 @@ void Piekv::print_trigger() {
                         +log_->log_segments_[1]->table_stats_->rx_pkt_num
                         +log_->log_segments_[2]->table_stats_->rx_pkt_num
                         +log_->log_segments_[3]->table_stats_->rx_pkt_num;
-        this->showUtilization();        
+        if (res[0]||res[1]||res[2]) this->showUtilization();        
 // printf("latter count: %ld\n",pre_count[0]);
 
     }
