@@ -50,7 +50,7 @@ public:
                          size_t value_length, size_t item_index,
                          uint64_t item_vec, uint64_t item_offset, 
                          LogSegment *segmentToGet);
-
+    void cleanUpHashTable();
 };
 
 

@@ -14,6 +14,7 @@
 
 #define MAX_BLOCK_NUM 16384
 
+#define THREAD_NUM 4
 
 
 typedef int temp;    // a temp type for all functions with undefined return types, remove it later

@@ -106,4 +106,4 @@ uint16_t try_find_slot(const Bucket *bucket, const uint16_t tag, const uint64_t 
 Cbool try_find_insert_bucket(const Bucket *bucket_, uint32_t *slot, const uint16_t tag, const uint8_t *key,
                              uint32_t keylength);
 
-
+uint32_t calc_segment_id(uint16_t tag);

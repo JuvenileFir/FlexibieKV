@@ -11,6 +11,11 @@ uint16_t calc_tag(uint64_t key_hash) {
     return tag;
 }
 
+
+uint32_t calc_segment_id(uint16_t tag) {
+  return tag % THREAD_NUM;
+}
+
 uint32_t read_version_begin(const Bucket *bucket UNUSED) {
 #ifdef TABLE_CONCURRENT
   while (true) {

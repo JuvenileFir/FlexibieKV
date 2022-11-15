@@ -231,10 +231,10 @@ int main(int argc, char *argv[]){
         m_piekv->showUtilization();
       }
       if (input == 3) {
-        timer->showCount();
+        m_piekv->hashtable_->showHashTableStatus();
       }
       if (input == 4) {
-        m_piekv->hashtable_->showHashTableStatus();
+        m_piekv->cleanUpHashTable();
       }
     }
 
