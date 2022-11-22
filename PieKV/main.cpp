@@ -188,6 +188,7 @@ int main(int argc, char *argv[]){
     }
     
     if (flow_mode == 3) workers.push_back(std::thread(&Piekv::memFlowingController, m_piekv));
+    if (flow_mode == 4) workers.push_back(std::thread(&Piekv::memFlowingControllerNew, m_piekv));
 
     workers.push_back(std::thread(&Piekv::print_trigger, m_piekv));
 
@@ -226,7 +227,7 @@ int main(int argc, char *argv[]){
         timer->showTime();
         // timer->clear();
         for (int i = 0; i < 4; i++) {
-          printf("thread %d rx: %d\n",i,core_statistics[i].rx);
+          printf("thread %d rx: %ld\n",i,core_statistics[i].rx);
         }
         m_piekv->showUtilization();
       }

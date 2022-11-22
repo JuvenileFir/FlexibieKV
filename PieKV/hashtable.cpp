@@ -133,24 +133,12 @@ int64_t HashTable::get_table(twoSnapshot *ts1, twoBucket *tb, Bucket *bucket,
     if (snapshot_is_flexibling) {
       return -2;
     }
-  #ifdef EXP_LATENCY
-    auto end = std::chrono::steady_clock::now();
-  #ifdef TRANSITION_ONLY
-    if (isTransitionPeriod) {
-        printf("GET(false): [time: %lu ns]\n",
-            std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-    }
-  #else
-    printf("GET(false): [time: %lu ns]\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
-  #endif
-  #endif
     return -1;
   }
   assert(tp.cuckoostatus == ok);
 
   // Cbool partial_value;
-  Bucket *located_bucket_ = &bucket[tp.bucket];
-  *located_bucket = located_bucket_;
+  *located_bucket = bucket + tp.bucket;
   return tp.slot;
 }
 

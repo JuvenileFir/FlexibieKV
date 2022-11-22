@@ -37,6 +37,7 @@ public:
     bool H2L(size_t num_pages);   // Q: is num_pages still needed?
     bool L2H(size_t num_pages);   // Q: is num_pages still needed?
     void memFlowingController();
+    void memFlowingControllerNew();
     void print_trigger();
 
     bool get(size_t t_id, uint64_t key_hash, const uint8_t *key, size_t key_length, uint8_t *out_value, uint32_t *in_out_value_length);
@@ -48,8 +49,7 @@ public:
     void move_to_head(Bucket* bucket, Bucket* located_bucket,
                          const LogItem* item, size_t key_length,
                          size_t value_length, size_t item_index,
-                         uint64_t item_vec, uint64_t item_offset, 
-                         LogSegment *segmentToGet);
+                         uint64_t item_vec, uint64_t item_offset, size_t t_id);
 
 };
 

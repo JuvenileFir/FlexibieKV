@@ -47,6 +47,7 @@ public:
     uint32_t usingblock_;
     uint32_t offset_;
     uint32_t round_;
+    double avg_item_size;
     MemPool *mempool_;
 
     LogSegment(MemPool *mempool);

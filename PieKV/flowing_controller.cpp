@@ -7,9 +7,9 @@ void HashTable::showHashTableStatus()
     for (int i = 0; i < 30; i++) {
         round[i] = 0;
     }
-    for (int i = 0; i < table_block_num_; i++) {
+    for (uint32_t i = 0; i < table_block_num_; i++) {
         Bucket *block = (Bucket *)get_block_ptr(i);
-        for (int j = 0; j < mempool_->get_block_size() / 64 - 1; j++) {
+        for (size_t j = 0; j < mempool_->get_block_size() / 64 - 1; j++) {
             Bucket *bucket = &block[j];
             for (int z = 0; z < 7; z++) {
                 int thisRound = ROUND(bucket->item_vec[z]);
@@ -48,9 +48,9 @@ void Piekv::showUtilization()
     double total_mem_utilization = 
         vaild_percentage * (log_->total_blocknum_ / total_block_num) 
             + load_factor * (hashtable_->table_block_num_ / total_block_num);
-    printf("[STATUS] Log   Memory utilization: %d / %d = %f %\n", store_load, store_capa, vaild_percentage);
-    printf("[STATUS] Index Memory utilization: %d / %d = %f %\n", index_load, index_capa, load_factor);
-    printf("[STATUS] Total Memory utilization: %f\n", total_mem_utilization);
+    printf("[STATUS] Log   Memory utilization: %ld / %ld = %f %%\n", store_load, store_capa, vaild_percentage);
+    printf("[STATUS] Index Memory utilization: %ld / %ld = %f %%\n", index_load, index_capa, load_factor);
+    printf("[STATUS] Total Memory utilization: %f %%\n", total_mem_utilization);
 
     // for (int i = 0; i < hashtable_->table_block_num_; i++) {
     //     TableBlock *block = hashtable_->table_blocks_[i];
@@ -132,11 +132,11 @@ void Piekv::memFlowingController()
             // printf("[STATUS] store load: %d  store capa: %d\n",store_load,store_capa);
             // printf("[STATUS] index load: %d  index capa: %d\n",index_load,index_capa);
             // printf("[STATUS] load_factor: %f  valid_percentage: %f\n",load_factor,vaild_percentage);
-            printf("[STATUS] Log   Memory utilization: %ld / %ld = %f \n", store_load, store_capa, vaild_percentage);
-            printf("[STATUS] Index Memory utilization: %ld / %ld = %f \n", index_load, index_capa, load_factor);
-            printf("[STATUS] Total Memory utilization: %f \n", total_mem_utilization);
+            printf("[STATUS] Log   Memory utilization: %ld / %ld = %f %%\n", store_load, store_capa, vaild_percentage);
+            printf("[STATUS] Index Memory utilization: %ld / %ld = %f %%\n", index_load, index_capa, load_factor);
+            printf("[STATUS] Total Memory utilization: %f %%\n", total_mem_utilization);
             
-            PRINT_EXCECUTION_TIME("  === [STAT] H2L is executed by Daemon === ", H2L(1));
+            PRINT_EXCECUTION_TIME("[STAT] H2L is executed by Daemon", H2L(1));
             #ifdef MULTIPLE_SHIFT
                 int segment_num = table->num_partitions;
                 printf("         segment num: %d\n", segment_num);
@@ -156,11 +156,11 @@ void Piekv::memFlowingController()
             // printf("[STATUS] store load: %d  store capa: %d\n",store_load,store_capa);
             // printf("[STATUS] index load: %d  index capa: %d\n",index_load,index_capa);
             // printf("[STATUS] load_factor: %f  valid_percentage: %f\n",load_factor,vaild_percentage);
-            printf("[STATUS] Log   Memory utilization: %ld / %ld = %f \n", store_load, store_capa, vaild_percentage);
-            printf("[STATUS] Index Memory utilization: %ld / %ld = %f \n", index_load, index_capa, load_factor);
-            printf("[STATUS] Total Memory utilization: %f \n", total_mem_utilization);
+            printf("[STATUS] Log   Memory utilization: %ld / %ld = %f %%\n", store_load, store_capa, vaild_percentage);
+            printf("[STATUS] Index Memory utilization: %ld / %ld = %f %%\n", index_load, index_capa, load_factor);
+            printf("[STATUS] Total Memory utilization: %f %%\n", total_mem_utilization);
             
-            PRINT_EXCECUTION_TIME("  === [STAT] L2H is executed by Daemon === ", L2H(1));
+            PRINT_EXCECUTION_TIME("[STAT] L2H is executed by Daemon", L2H(1));
             #ifdef MULTIPLE_SHIFT
                 int segment_num = table->num_partitions;
                 printf("         segment num: %d\n", segment_num);
@@ -179,49 +179,77 @@ void Piekv::memFlowingController()
     }
 }
 
+void Piekv::memFlowingControllerNew() {
+
+	printf("[STAT] Memory flowing controler started on CORE 32\n");
+	
+	// bind memflowing thread to core 34
+	cpu_set_t mask;
+	CPU_ZERO(&mask);
+	CPU_SET(32, &mask);
+	if (pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask) < 0)
+		fprintf(stderr, "[Error] set thread affinity failed\n");
+
+	double ideal_ratio, block_ratio, threshold;
+	block_ratio = hashtable_->table_block_num_ * 1.0 / mempool_->blocknum_;
+	threshold = 1.0 / mempool_->blocknum_;
+	sleep(2);
+
+	while (is_running_) {
+		for (uint16_t i = 0; i < log_->total_segmentnum_; i++) {
+			printf("avg_item_size:%.3lf\n",log_->log_segments_[i]->avg_item_size);
+			ideal_ratio = 9.0 / (9 + log_->log_segments_[i]->avg_item_size);
+			if (block_ratio - ideal_ratio > threshold) {
+				printf("ideal:%.3lf\tblock:%.3lf\t\n", ideal_ratio, block_ratio);
+
+				PRINT_EXCECUTION_TIME("[STAT] H2L is executed by Daemon", H2L(1));//todo:可添加对特定线程log的移动？
+			} else if (ideal_ratio - block_ratio > threshold) {
+				
+				PRINT_EXCECUTION_TIME("[STAT] L2H is executed by Daemon", L2H(1));
+			}
+		}
+	}
+}
 
 bool Piekv::H2L(size_t blocknum_to_move)
 {
-    // check if hash blocks are too few to shrink
-    // assert(num_pages < NumBuckets_v(current_version));
-
-    if (!(blocknum_to_move < hashtable_->round_hash_->get_block_num())) {
-        printf("Too few partitions for expanding Log\n");
-        return false;
-    }
-
-    printf("[ARGS](H2L) to_shrink = %zu\t log = %u\t partition = %u\n", blocknum_to_move, log_->total_blocknum_,
-            hashtable_->table_block_num_);
-
-
-    TableBlock **tableblocksToMove = (TableBlock **)malloc(blocknum_to_move * sizeof(TableBlock *));
-    for (size_t i = 0; i < blocknum_to_move; i++) {
-        tableblocksToMove[i] = (TableBlock *)malloc(sizeof(TableBlock));
-    }
-    hashtable_->ShrinkTable(tableblocksToMove, blocknum_to_move);
-    // Append page(s) to SlabStore in round robin.
-    log_->Expand(tableblocksToMove,blocknum_to_move,4*64);   //  TODO: flexible log item size here
-    return true;
+	// check if hash blocks are too few to shrink
+	// assert(num_pages < NumBuckets_v(current_version));
+	if (!(blocknum_to_move < hashtable_->round_hash_->get_block_num())) {
+		printf("Too few partitions for expanding Log\n");
+		return false;
+	}
+	printf("[ARGS] H2L to_shrink = %zu\t log = %u\t partition = %u\n",
+				blocknum_to_move, log_->total_blocknum_, hashtable_->table_block_num_);
+	TableBlock **tableblocksToMove = 
+			(TableBlock **)malloc(blocknum_to_move * sizeof(TableBlock *));
+	for (size_t i = 0; i < blocknum_to_move; i++) {
+		tableblocksToMove[i] = (TableBlock *)malloc(sizeof(TableBlock));
+	}
+	hashtable_->ShrinkTable(tableblocksToMove, blocknum_to_move);
+	// Append page(s) to SlabStore in round robin.
+	log_->Expand(tableblocksToMove,blocknum_to_move,4*64);   //  TODO: flexible log item size here
+	return true;
 }
 
 
 bool Piekv::L2H(size_t blocknum_to_move)
 {
-    // check if log blocks are too few to shrink
-    // assert(num_pages < table->stores->totalNumPage);
-    if (!(blocknum_to_move < log_->total_blocknum_)) {
-        printf("Too few memory hold by log for expanding Hash table\n");
-        return false;
-    }
-    printf("[ARGS](L2H) to_shrink = %zu\t log = %u\t partition = %u\n", blocknum_to_move, log_->total_blocknum_,
-            hashtable_->table_block_num_);
-
-
-    // shrink store
-    TableBlock **tableblocksToMove = (TableBlock **)malloc(blocknum_to_move * sizeof(TableBlock));
-    log_->Shrink(tableblocksToMove, blocknum_to_move);
-    hashtable_->ExpandTable(tableblocksToMove, blocknum_to_move);
-
-
-    return true;
+	// check if log blocks are too few to shrink
+	// assert(num_pages < table->stores->totalNumPage);
+	if (!(blocknum_to_move < log_->total_blocknum_)) {
+		printf("Too few memory hold by log for expanding Hash table\n");
+		return false;
+	}
+	printf("[ARGS] L2H to_shrink = %zu\t log = %u\t partition = %u\n",
+				blocknum_to_move, log_->total_blocknum_, hashtable_->table_block_num_);
+	// shrink store
+	TableBlock **tableblocksToMove = 
+			(TableBlock **)malloc(blocknum_to_move * sizeof(TableBlock *));
+	for (size_t i = 0; i < blocknum_to_move; i++) {
+		tableblocksToMove[i] = (TableBlock *)malloc(sizeof(TableBlock));
+	}
+	log_->Shrink(tableblocksToMove, blocknum_to_move);
+	hashtable_->ExpandTable(tableblocksToMove, blocknum_to_move);
+	return true;
 }
