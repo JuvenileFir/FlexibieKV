@@ -260,8 +260,14 @@ void Piekv::memFlowingControllerNew() {
 	block_ratio = hashtable_->table_block_num_ * 1.0 / mempool_->blocknum_;
 	threshold = 1.0 / mempool_->blocknum_;
 	sleep(2);
-
+    
 	while (is_running_) {
+        // TODO: use set count to trigger countPreciseAKV or cleanup here
+        uint64_t averageKVSizes[THREAD_NUM];
+        countPreciseAKV(averageKVSizes);
+        for (uint16_t i = 0; i < log_->total_segmentnum_; i++) {
+            log_->log_segments_[i]->avg_item_size = averageKVSizes[i];
+        }
 		for (uint16_t i = 0; i < log_->total_segmentnum_; i++) {
 			printf("avg_item_size:%.3lf\n",log_->log_segments_[i]->avg_item_size);
 			ideal_ratio = 9.0 / (9 + log_->log_segments_[i]->avg_item_size);
