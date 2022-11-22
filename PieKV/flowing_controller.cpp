@@ -51,7 +51,7 @@ void Piekv::cleanUpHashTable()
     }
 }
 
-void Piekv::countPreciseAKV(uint64_t *averageKVSizes)
+void Piekv::countPreciseAKV(double *averageKVSizes)
 {
     LogSegment *segments[THREAD_NUM];
     uint64_t entryCount[THREAD_NUM];
@@ -263,10 +263,14 @@ void Piekv::memFlowingControllerNew() {
     
 	while (is_running_) {
         // TODO: use set count to trigger countPreciseAKV or cleanup here
-        uint64_t averageKVSizes[THREAD_NUM];
+        sleep(1);
+        double averageKVSizes[THREAD_NUM];
         countPreciseAKV(averageKVSizes);
         for (uint16_t i = 0; i < log_->total_segmentnum_; i++) {
+            printf("segment %d: ", i);
+            printf("old avg_item_size:%.3lf ",log_->log_segments_[i]->avg_item_size);
             log_->log_segments_[i]->avg_item_size = averageKVSizes[i];
+            printf("precise avg_item_size:%.3lf\n",log_->log_segments_[i]->avg_item_size);
         }
 		for (uint16_t i = 0; i < log_->total_segmentnum_; i++) {
 			printf("avg_item_size:%.3lf\n",log_->log_segments_[i]->avg_item_size);
