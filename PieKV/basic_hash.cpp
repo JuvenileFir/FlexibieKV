@@ -91,7 +91,7 @@ uint16_t try_find_slot(const Bucket *bucket, const uint16_t tag, const uint64_t 
  * in `slot` and return true. If no duplicate key is found and no empty slot
  * is found, we store `ITEMS_PER_BUCKET` in `slot` and return true.
  */
-Cbool try_find_insert_bucket(const Bucket *bucket_, uint32_t *slot,
+Cbool try_find_insert_bucket(Bucket *bucket_, uint32_t *slot,
                              const uint16_t tag, const uint8_t *key,
                              uint32_t keylength) {
   uint32_t i;
@@ -112,3 +112,33 @@ Cbool try_find_insert_bucket(const Bucket *bucket_, uint32_t *slot,
   }
   return true;
 }
+
+Cbool try_find_insert_bucket(Bucket *bucket_, uint32_t *slot,
+                             const uint16_t tag, const uint8_t *key,
+                             uint32_t keylength, uint64_t *rounds) {
+  uint32_t i;
+  *slot = ITEMS_PER_BUCKET;
+  for (i = 0; i < ITEMS_PER_BUCKET; ++i) {
+    if (!bucket_->item_vec[i]) {
+      *slot = i;
+    } else {
+      uint16_t entry_tag = TAG(bucket_->item_vec[i]);
+      if (entry_tag != tag) continue;
+      LogItem *item = (LogItem *)kMemPool->locate_item(PAGE(bucket_->item_vec[i]),
+                                                       ITEM_OFFSET(bucket_->item_vec[i]));
+      // TODO: add an option here to choose if cleanup or not
+      uint32_t segmentId = calc_segment_id(entry_tag);
+      if (ROUND(bucket_->item_vec[i]) + 1 < rounds[segmentId]) {
+        // cleanup this entry for its outdated round
+        bucket_->item_vec[i] = 0;
+      }
+      if (key_eq(item->data, ITEMKEY_LENGTH(item->kv_length_vec), key, keylength)) {
+        *slot = i;
+        // printf("%ld in hash and %ld come in\n",(uint64_t)(*(uint64_t *)item->data),(uint64_t)(*(uint64_t *)key));
+        return false;
+      }
+    }
+  }
+  return true;
+}
+

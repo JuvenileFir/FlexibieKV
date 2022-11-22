@@ -103,6 +103,9 @@ tablePosition cuckoo_find_shallow(Bucket *partition, struct twoBucket tb, uint64
 tablePosition cuckoo_insert(Bucket *partition, uint64_t keyhash, uint16_t tag, struct twoBucket tb,
                             const uint8_t *key, size_t keylength);
 
+tablePosition cuckoo_insert(Bucket *partition, uint64_t keyhash, uint16_t tag, struct twoBucket tb,
+                            const uint8_t *key, size_t keylength, uint64_t *rounds);
+
 cuckooStatus run_cuckoo(Bucket *partition, struct twoBucket tb, uint32_t *insertbucket, uint32_t *insertslot);
 
 int cuckoopath_search(Bucket *partition, cuckooRecord *cuckoopath, const uint32_t b1, const uint32_t b2);

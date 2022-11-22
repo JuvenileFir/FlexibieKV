@@ -36,7 +36,10 @@ void Piekv::cleanUpHashTable()
             Bucket *bucket = &block[j];
             for (int z = 0; z < 7; z++) {
                 int thisRound = ROUND(bucket->item_vec[z]);
-                if (thisRound < 0) exit(-1);
+                if (thisRound < 0) {
+                    cout << "[ERROR] round < 0 in cleanuphashtable" << endl;
+                    exit(-1);
+                }
                 uint32_t segmentId = calc_segment_id(TAG(bucket->item_vec[z]));
                 if (bucket->item_vec[z] != 0) {
                     if (thisRound + 1 < segments[segmentId]->round_) {

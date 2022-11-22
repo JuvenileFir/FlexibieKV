@@ -163,6 +163,27 @@ struct tablePosition cuckoo_insert(Bucket *partition, uint64_t keyhash, uint16_t
   return (tablePosition){0, 0, failure_table_full};
 }
 
+struct tablePosition cuckoo_insert(Bucket *partition, uint64_t keyhash, uint16_t tag, struct twoBucket tb,
+                                   const uint8_t *key, size_t keylength, uint64_t *rounds) {
+  // tablePosition tpos;
+  uint32_t res1, res2;
+  // lock_two_buckets(partition, tb);
+  if (!try_find_insert_bucket(&partition[tb.b1], &res1, tag, key, keylength, rounds)) {
+    return (tablePosition){tb.b1, res1, failure_key_duplicated};
+  }
+  if (!try_find_insert_bucket(&partition[tb.b2], &res2, tag, key, keylength, rounds)) {
+    return (tablePosition){tb.b1, res2, failure_key_duplicated};
+  }
+  if (res1 != ITEMS_PER_BUCKET) {
+    return (tablePosition){tb.b1, res1, ok};
+  }
+  if (res2 != ITEMS_PER_BUCKET) {
+    return (tablePosition){tb.b2, res2, ok};
+  }
+  res2 = random() % 7;
+  return (tablePosition){tb.b2, res2, overwrite};
+}
+
 /*
  * run_cuckoo performs cuckoo hashing on the table in an attempt to free up
  * a slot on either of the insert buckets, which are assumed to be locked
