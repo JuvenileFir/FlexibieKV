@@ -52,7 +52,7 @@ bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key,
         uint64_t item_offset = ITEM_OFFSET(item_vec);
         // segmentToGet->get_log(out_value,in_out_value_length,block_id,item_offset);
 
-        if (round + 1 < segmentToGet->round_) {
+        /* if (round + 1 < segmentToGet->round_) {
             segmentToGet->table_stats_->test_notfound += 1;
             return false;
         }
@@ -61,7 +61,7 @@ bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key,
                 segmentToGet->table_stats_->test_notfound += 1;
                 return false;
             }
-        }
+        } */
         LogItem *item = segmentToGet->locateItem(block_id, item_offset);
         
         size_t key_length = 
@@ -75,12 +75,13 @@ bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key,
         if (!is_snapshots_same(*ts1, read_two_buckets_end(bucket, *tb))) continue;
         segmentToGet->table_stats_->get_found += 1;
         // segmentToGet->table_stats_->count += 1;
-
-        item_offset += block_id * mempool_->get_block_size();
+        
+        item_offset += segmentToGet->get_log_block_id(block_id) * mempool_->get_block_size();
+        allow_mutation = 1;
         if (allow_mutation)
             this->move_to_head(bucket, (Bucket*)located_bucket,item, key_length,
                                value_length, ret, item_vec,
-                               item_offset,segmentToGet);
+                               item_offset,t_id);
 
         break;
     }
@@ -190,6 +191,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
         size_t old_value_length = 
             std::min(ITEMVALUE_LENGTH(item->kv_length_vec), (uint32_t)MAX_VALUE_LENGTH);
         
+        //目前底层只能比较32B大小的两值，且两者len不等时，直接认为不等。所以下面判断或底层实现至少需要改一个
         // if (!val_eq(val,val_len,item->data + ROUNDUP8(key_length),old_value_length)) {
         //     if (val_len <= old_value_length){
         //         memcpy8(item->data + ROUNDUP8(key_length), val, val_len);
@@ -210,7 +212,6 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
             return false;
         }
 
-
         // segmentToSet->table_stats_->set_fail += 1;
         // return false;//return FAILURE_ALREADY_EXIST;
     }
@@ -220,6 +221,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     uint64_t new_item_size = (uint32_t)(sizeof(LogItem) + ROUNDUP8(key_len) + ROUNDUP8(val_len));
     int64_t item_offset;
     item_offset = segmentToSet->AllocItem(new_item_size);
+
     if (item_offset == -1) {
         unlock_two_buckets(bucket, tb);
  
@@ -259,12 +261,15 @@ void Piekv::move_to_head(Bucket* bucket, Bucket* located_bucket,
                          const LogItem* item, size_t key_length,
                          size_t value_length, size_t item_index,
                          uint64_t item_vec, uint64_t item_offset, 
-                         LogSegment *segmentToGet) {
+                         size_t t_id) {
+    LogSegment *segmentToGet = log_->log_segments_[t_id];
     uint64_t new_item_size = 
         sizeof(LogItem) + ROUNDUP8(key_length) + ROUNDUP8(value_length);
     uint64_t distance_from_tail = 
         (segmentToGet->get_tail() - item_offset) & (log_->mask_);//tail <- set
-    if (distance_from_tail > mth_threshold_ +1 ) {
+    if (distance_from_tail > mth_threshold_) {
+
+        // printf("t_id:%ld\tperform——tail:%ld \toffset:%ld\tdist:%ld\tthres:%ld\n",t_id,segmentToGet->get_tail(),item_offset,distance_from_tail,mth_threshold_);
 
     write_lock_bucket(bucket);
     
@@ -272,11 +277,11 @@ void Piekv::move_to_head(Bucket* bucket, Bucket* located_bucket,
 
     // check if the original item is still there
     if (located_bucket->item_vec[item_index] == item_vec) {//仅验证
- 
         // uint64_t new_tail = segmentToGet->get_tail();
         uint64_t new_item_offset = (uint64_t)segmentToGet->AllocItem(new_item_size);
 
         if (item_offset < BLOCK_MAX_NUM * kblock_size) {
+
             uint32_t block_id = segmentToGet->get_block_id(segmentToGet->usingblock_);
             LogItem *new_item = (LogItem *)segmentToGet->locateItem(block_id, new_item_offset);
             memcpy8((uint8_t*)new_item, (const uint8_t*)item, new_item_size);
@@ -285,8 +290,12 @@ void Piekv::move_to_head(Bucket* bucket, Bucket* located_bucket,
             located_bucket->item_vec[item_index] = ITEM_VEC(TAG(item_vec), temp_round, block_id, new_item_offset);
 
             // success
+
             segmentToGet->table_stats_->move_to_head_performed++;
+            // printf("performed加1 done:%ld\n",segmentToGet->table_stats_->move_to_head_performed);
+
         } else {
+
             // failed -- original data become invalid in the pool
             segmentToGet->table_stats_->move_to_head_failed++;
         }
@@ -304,7 +313,11 @@ void Piekv::move_to_head(Bucket* bucket, Bucket* located_bucket,
         segmentToGet->table_stats_->move_to_head_failed++;
     }
   } else {
-    segmentToGet->table_stats_->move_to_head_skipped++;
+        // printf("t_id:%ld\tskip——tail:%ld \toffset:%ld\tdist:%ld\tthres:%ld\n",t_id,segmentToGet->get_tail(),item_offset,distance_from_tail,mth_threshold_);
+
+        segmentToGet->table_stats_->move_to_head_skipped++;
+        // printf("skipped加1 done:%ld\n",segmentToGet->table_stats_->move_to_head_skipped);
+
   }
 }
 

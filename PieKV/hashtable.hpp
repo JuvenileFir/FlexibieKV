@@ -5,8 +5,8 @@
 #include "roundhash.hpp"
 #include "cuckoo.h"
 
-#define MAX_KEY_LENGTH 255
-#define MAX_VALUE_LENGTH 1048575
+#define MAX_KEY_LENGTH 128
+#define MAX_VALUE_LENGTH 896
 
 using namespace std;
 

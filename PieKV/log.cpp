@@ -1,7 +1,5 @@
 #include "log.hpp"
 
-
-
 LogSegment::LogSegment(MemPool *mempool)
 {
     mempool_ = mempool;
@@ -19,6 +17,7 @@ LogSegment::LogSegment(MemPool *mempool)
     usingblock_ = 0;
     offset_ = 0;
     round_ = 0;
+    avg_item_size = 0;
 }
 
 LogSegment::~LogSegment()
@@ -211,7 +210,7 @@ uint32_t LogSegment::get_block_id(uint32_t log_index) {
 }
 
 uint32_t LogSegment::get_log_block_id(uint32_t mem_block_id) {
-    for (int i = 0; i < blocknum_; i++) {
+    for (uint32_t i = 0; i < blocknum_; i++) {
         if (log_blocks_[i]->block_id == mem_block_id)
             return i;
     }
@@ -268,9 +267,10 @@ int64_t LogSegment::AllocItem(uint64_t item_size) {
         offset_ += item_size;
         
         log_blocks_[usingblock_]->residue -= item_size;
-        
+        avg_item_size = 
+            (avg_item_size * table_stats_->set_success + item_size) * 1.0 /
+            (table_stats_->set_success + 1);
         return item_offset;
-        
     } else {
         // TODO: implement a function `big_set`
         return -2;  // batch_too_small
