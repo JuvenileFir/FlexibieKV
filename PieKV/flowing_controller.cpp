@@ -30,9 +30,9 @@ void Piekv::cleanUpHashTable()
         segments[i] = log_->log_segments_[i];
     }
     
-    for (int i = 0; i < hashtable_->table_block_num_; i++) {
+    for (uint32_t i = 0; i < hashtable_->table_block_num_; i++) {
         Bucket *block = (Bucket *)(hashtable_->get_block_ptr(i));
-        for (int j = 0; j < mempool_->get_block_size() / 64 - 1; j++) {
+        for (size_t j = 0; j < mempool_->get_block_size() / 64 - 1; j++) {
             Bucket *bucket = &block[j];
             for (int z = 0; z < 7; z++) {
                 int thisRound = ROUND(bucket->item_vec[z]);
@@ -42,7 +42,7 @@ void Piekv::cleanUpHashTable()
                 }
                 uint32_t segmentId = calc_segment_id(TAG(bucket->item_vec[z]));
                 if (bucket->item_vec[z] != 0) {
-                    if (thisRound + 1 < segments[segmentId]->round_) {
+                    if ((uint32_t)thisRound + 1 < segments[segmentId]->round_) {
                         bucket->item_vec[z] = 0;
                     }
                 }
@@ -223,17 +223,17 @@ void Piekv::memFlowingControllerNew() {
 	threshold = 1.0 / mempool_->blocknum_;
 	sleep(2);
 
-	while (is_running_) {
+	while (is_running_&&1) {
 		for (uint16_t i = 0; i < log_->total_segmentnum_; i++) {
-			printf("avg_item_size:%.3lf\n",log_->log_segments_[i]->avg_item_size);
 			ideal_ratio = 9.0 / (9 + log_->log_segments_[i]->avg_item_size);
 			if (block_ratio - ideal_ratio > threshold) {
-				printf("ideal:%.3lf\tblock:%.3lf\t\n", ideal_ratio, block_ratio);
-
+				printf("[STAT] H2L ideal:%.3lf\tblock:%.3lf\t\n", ideal_ratio, block_ratio);
 				PRINT_EXCECUTION_TIME("[STAT] H2L is executed by Daemon", H2L(1));//todo:可添加对特定线程log的移动？
-			} else if (ideal_ratio - block_ratio > threshold) {
-				
+				block_ratio = hashtable_->table_block_num_ * 1.0 / mempool_->blocknum_;
+			} else if (ideal_ratio - block_ratio > threshold && ideal_ratio < 1) {
+				printf("[STAT] L2H ideal:%.3lf\tblock:%.3lf\t\n", ideal_ratio, block_ratio);
 				PRINT_EXCECUTION_TIME("[STAT] L2H is executed by Daemon", L2H(1));
+				block_ratio = hashtable_->table_block_num_ * 1.0 / mempool_->blocknum_;
 			}
 		}
 	}
