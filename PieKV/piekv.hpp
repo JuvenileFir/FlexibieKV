@@ -51,6 +51,7 @@ public:
                          uint64_t item_vec, uint64_t item_offset, 
                          LogSegment *segmentToGet);
     void cleanUpHashTable();
+    void countPreciseAKV(uint64_t *averageKVSizes);
 };
 
 
