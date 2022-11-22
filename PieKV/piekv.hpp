@@ -50,6 +50,7 @@ public:
                          const LogItem* item, size_t key_length,
                          size_t value_length, size_t item_index,
                          uint64_t item_vec, uint64_t item_offset, size_t t_id);
+    void cleanUpHashTable();
 
 };
 

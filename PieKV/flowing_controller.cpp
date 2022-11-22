@@ -14,12 +14,40 @@ void HashTable::showHashTableStatus()
             for (int z = 0; z < 7; z++) {
                 int thisRound = ROUND(bucket->item_vec[z]);
                 if (thisRound < 0) exit(-1);
-                round[thisRound] += 1;
+                if (bucket->item_vec[z] != 0) round[thisRound] += 1;
             }
         }
     }
     for (int i = 0; i < 30; i++) {
         printf("[STATUS] round %d: %d\n", i, round[i]);
+    }
+}
+
+void Piekv::cleanUpHashTable()
+{
+    LogSegment *segments[THREAD_NUM];
+    for (int i = 0; i < THREAD_NUM; i++) {
+        segments[i] = log_->log_segments_[i];
+    }
+    
+    for (int i = 0; i < hashtable_->table_block_num_; i++) {
+        Bucket *block = (Bucket *)(hashtable_->get_block_ptr(i));
+        for (int j = 0; j < mempool_->get_block_size() / 64 - 1; j++) {
+            Bucket *bucket = &block[j];
+            for (int z = 0; z < 7; z++) {
+                int thisRound = ROUND(bucket->item_vec[z]);
+                if (thisRound < 0) {
+                    cout << "[ERROR] round < 0 in cleanuphashtable" << endl;
+                    exit(-1);
+                }
+                uint32_t segmentId = calc_segment_id(TAG(bucket->item_vec[z]));
+                if (bucket->item_vec[z] != 0) {
+                    if (thisRound + 1 < segments[segmentId]->round_) {
+                        bucket->item_vec[z] = 0;
+                    }
+                }
+            }
+        }
     }
 }
 

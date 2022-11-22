@@ -126,6 +126,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
 
     LogSegment *segmentToSet = log_->log_segments_[t_id];
 
+
 #ifdef EXP_LATENCY
     Cbool isTransitionPeriod = hashtable_->is_flexibling_;
     auto start = std::chrono::steady_clock::now();
@@ -152,9 +153,14 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
      * policy is the simplest way.
      */
 
+    uint64_t rounds[THREAD_NUM];
+    for (int i = 0; i < THREAD_NUM; i++) {
+        rounds[i] = log_->log_segments_[i]->round_;
+    }
+
     twoBucket tb = cal_two_buckets(key_hash);
     lock_two_buckets(bucket, tb);
-    tablePosition tp = cuckoo_insert(bucket, key_hash, tag, tb, key, key_len);
+    tablePosition tp = cuckoo_insert(bucket, key_hash, tag, tb, key, key_len, rounds);
 
     if (tp.cuckoostatus == failure_table_full)
     {

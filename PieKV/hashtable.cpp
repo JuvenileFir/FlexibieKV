@@ -156,7 +156,7 @@ int64_t HashTable::set_table(tablePosition *tp, twoBucket *tb, uint64_t key_hash
   uint32_t block_index = round_hash_->HashToBucket(key_hash);
   Bucket *bucket = (Bucket *)this->get_block_ptr(block_index);
 
-
+  // WARNING: no round cleanup here, so use it carefully!
   tablePosition tps = cuckoo_insert(bucket, key_hash, tag, *tb, key, key_length);
 
   tp = &tps;
