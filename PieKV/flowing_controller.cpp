@@ -51,6 +51,60 @@ void Piekv::cleanUpHashTable()
     }
 }
 
+void Piekv::countPreciseAKV(uint64_t *averageKVSizes)
+{
+    LogSegment *segments[THREAD_NUM];
+    uint64_t entryCount[THREAD_NUM];
+    uint64_t itemSizeCount[THREAD_NUM];
+    for (int i = 0; i < THREAD_NUM; i++) {
+        segments[i] = log_->log_segments_[i];
+        entryCount[i] = 0;
+        itemSizeCount[i] = 0;
+    }
+    
+    for (int i = 0; i < hashtable_->table_block_num_; i++) {
+        Bucket *block = (Bucket *)(hashtable_->get_block_ptr(i));
+        for (int j = 0; j < mempool_->get_block_size() / 64 - 1; j++) {
+            Bucket *bucket = &block[j];
+            for (int z = 0; z < 7; z++) {
+                int thisRound = ROUND(bucket->item_vec[z]);
+                if (thisRound < 0) {
+                    cout << "[ERROR] round < 0 in cleanuphashtable" << endl;
+                    exit(-1);
+                }
+                uint32_t segmentId = calc_segment_id(TAG(bucket->item_vec[z]));
+                if (bucket->item_vec[z] != 0) {
+                    if (thisRound + 1 < segments[segmentId]->round_) {
+                        // disable the cleanup function
+                        // bucket->item_vec[z] = 0;
+                    }
+                    else {
+                        entryCount[segmentId] += 1;
+                        LogItem *item = (LogItem *)mempool_->locate_item(PAGE(bucket->item_vec[z]), ITEM_OFFSET(bucket->item_vec[z]));
+                        uint64_t itemSize = sizeof(LogItem) + ITEMKEY_LENGTH(item->kv_length_vec) + ITEMVALUE_LENGTH(item->kv_length_vec);
+                        itemSizeCount[segmentId] += itemSize;
+                    }
+                }
+            }
+        }
+    }
+
+    // cal AKV for each thread
+    // uint64_t averageKVSizes[THREAD_NUM];
+    for (int i = 0; i < THREAD_NUM; i++) {
+        averageKVSizes[i] = itemSizeCount[i] / entryCount[i];
+    }
+
+    // total count to cal AKV for the entire piekv
+    // uint64_t totalEntryCount = 0;
+    // uint64_t totalItemSizeCount = 0;
+    // for (int i = 0; i < THREAD_NUM; i++) {
+    //     totalEntryCount += entryCount[i];
+    //     totalItemSizeCount += itemSizeCount[i];
+    // }
+    // uint64_t totalAverageKVSize = totalItemSizeCount / totalEntryCount;
+}
+
 void Piekv::showUtilization()
 {
     size_t store_load = 0;
@@ -76,29 +130,10 @@ void Piekv::showUtilization()
     double total_mem_utilization = 
         vaild_percentage * (log_->total_blocknum_ / total_block_num) 
             + load_factor * (hashtable_->table_block_num_ / total_block_num);
-    printf("[STATUS] Log   Memory utilization: %ld / %ld = %f %%\n", store_load, store_capa, vaild_percentage);
-    printf("[STATUS] Index Memory utilization: %ld / %ld = %f %%\n", index_load, index_capa, load_factor);
-    printf("[STATUS] Total Memory utilization: %f %%\n", total_mem_utilization);
-
-    // for (int i = 0; i < hashtable_->table_block_num_; i++) {
-    //     TableBlock *block = hashtable_->table_blocks_[i];
-    //     int counter = 0;
-    //     for (int j = 0; j < 32768; j++) {
-    //         Bucket *bucket = (Bucket *)(block + 64 * j);
-    //         for (int k = 0; k < 7; k++) {
-    //             if (bucket->item_vec[k] != 0){
-    //                 counter += 1;
-    //                 break;
-    //             }
-    //         }
-    //         /* if (counter != 0) {
-    //             break;
-    //         } */
-    //     }
-    //     if (counter != 0)
-    //         printf("[STATUS] block %d not empty %d\n",i, counter);
-    // } 
-    
+            
+    printf("[STATUS] Log   Memory utilization: %d / %d = %f %\n", store_load, store_capa, vaild_percentage);
+    printf("[STATUS] Index Memory utilization: %d / %d = %f %\n", index_load, index_capa, load_factor);
+    printf("[STATUS] Total Memory utilization: %f\n", total_mem_utilization);
 }
 
 void Piekv::memFlowingController()
@@ -135,7 +170,10 @@ void Piekv::memFlowingController()
 
         // sleep so get/set can run for a while
         sleep(1);
-        
+        // TODO: use set count to trigger countPreciseAKV or cleanup here
+        // uint64_t averageKVSizes[THREAD_NUM];
+        // countPreciseAKV(averageKVSizes);
+
         // log class |
         store_load = 0;
         index_load = 0;
@@ -222,8 +260,14 @@ void Piekv::memFlowingControllerNew() {
 	block_ratio = hashtable_->table_block_num_ * 1.0 / mempool_->blocknum_;
 	threshold = 1.0 / mempool_->blocknum_;
 	sleep(2);
-
-	while (is_running_&&1) {
+    
+	while (is_running_) {
+        // TODO: use set count to trigger countPreciseAKV or cleanup here
+        uint64_t averageKVSizes[THREAD_NUM];
+        countPreciseAKV(averageKVSizes);
+        for (uint16_t i = 0; i < log_->total_segmentnum_; i++) {
+            log_->log_segments_[i]->avg_item_size = averageKVSizes[i];
+        }
 		for (uint16_t i = 0; i < log_->total_segmentnum_; i++) {
 			ideal_ratio = 9.0 / (9 + log_->log_segments_[i]->avg_item_size);
 			if (block_ratio - ideal_ratio > threshold) {
