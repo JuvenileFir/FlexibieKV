@@ -1,23 +1,68 @@
 ## Class Structure
 
 ```mermaid
-graph LR
-	PieKV --> hashtable	
-	PieKV --> log
-	PieKV --> mempool
+flowchart LR
 	
-	hashtable --> RoundHash
-	hashtable --> tableblock
-	tableblock --> bucket
 
-	log --> logSegment
+	main -->PK
+	PK --> Hashtable	
+	PK --> Log
+	PK --> Mempool
+	PK ---> methods
+	PK --> mfc
+	PK ---> pt
 
-	logSegment --> logblock
+	methods --> mth
+	methods --> H2L
+	methods --> L2H
+	methods --> get
+	methods --> set
 
-	mempool --> block
+	get -.->mth
+	Hashtable --> RoundHash
+	Hashtable --> tb
+	tb --> bucket
+	Log -->ls
+	ls --> logblock
 
-	communication --> RX/TX
-	communication --> Parser
+	Mempool --> block
+
+	mfc -.-> H2L
+	mfc -.-> L2H
+
+	main ----> rtw
+	rtw -.-> get
+	rtw -.-> set
+
+	
+
+	classDef header fill:#a8d5eb,font-family:arias,font-size:14px,font-weight:300;
+	classDef func fill:#8ec95d,font-family:arias,font-size:14px;
+	classDef subclass fill:#fae000,font-family:arias,font-size:14px,font-weight:300;
+	classDef common fill:#eeeeee,font-family:arias,font-size:14px,font-weight:300;
+	classDef main fill:#e04d6d,font-family:arias,font-size:15px;
+		main:::main
+		methods:::subclass
+		get("get()"):::func
+		set("set()"):::func
+		H2L("H2L()"):::func
+		L2H("L2H()"):::func
+		mth("move to head()"):::func
+		PK[PieKV]:::main
+		RoundHash["RoundHash × 2"]:::common
+		logblock:::common
+		tb[Tableblock]:::common
+		bucket:::common
+		block:::common
+		Log:::subclass
+		Mempool:::subclass
+		Hashtable:::subclass
+		mfc["memflowingController × 1 线程"]:::header
+		pt["print_performance × 1 线程"]:::header
+		rtw["RTWorker × 4 线程"]:::header
+		ls["LogSegment × 4"]:::common
+
+
 	
 
 ```
@@ -25,46 +70,45 @@ graph LR
 ## headers‘ dependencies
 
 ```mermaid
-graph BT
-	
-basic_hash.h --> cuckoo.h
-
-%%basic_hash.h --> bc>basic_hash.c]
-%%basic_hash.h --> hp>hashtable.cpp]
-
-%%communication.hpp --> cp>communication.cpp]
-%%communication.hpp --> mp>main.cpp]
-
-cuckoo.h --> hashtable.hpp
-
-%%cuckoo.h --> cc>cuckoo.c]
-
-hashtable.hpp --> log.hpp
-
-%%hashtable.hpp --> hp>hashtable.cpp]
-
-log.hpp --> piekv.hpp
-%%log.hpp --> mempool.hpp
-
-%%log.hpp --> lp>log.cpp]
-
+flowchart BT
+roundhash.hpp:::header --> rp(roundhash.cpp):::source
+piekv.hpp --> fp(flowing_controller.cpp):::source
+subgraph Headers
+basic_hash.h:::header --> cuckoo.h
+cuckoo.h:::header --> hashtable.hpp
+hashtable.hpp:::header --> log.hpp
+timer.h:::header --> piekv.hpp
+log.hpp:::header --> piekv.hpp
 mempool.hpp --> basic_hash.h
-
-%%mempool.hpp --> mp>mempool.cpp]
-
-piekv.hpp --> communication.hpp
-
-%%piekv.hpp --> fp>flowing_controller.cpp]
-%%piekv.hpp --> op>operation.cpp]
-
+piekv.hpp:::header --> communication.hpp
 roundhash.hpp --> hashtable.hpp
 
-%%roundhash.hpp --> rp>roundhash.cpp]
+util.h:::header --> basic_hash.h
+end
+basic_hash.h --> bp(basic_hash.cpp):::source
+
+
+communication.hpp --> main(main.cpp):::source
+communication.hpp:::header --> cp(communication.cpp):::source
+
+cuckoo.h --> cc(cuckoo.cpp):::source
+
+hashtable.hpp --> hp(hashtable.cpp):::source
+
+
+
+mempool.hpp:::header --> mp(mempool.cpp):::source
+
+piekv.hpp --> op(operation.cpp):::source
+
+
+
 
 %%util.h --> zipf.h
-util.h --> basic_hash.h
+
 
 %%zipf.h --> NO_INCLUDE
-
+classDef header fill:#eef,font-family:arias,font-size:14.5px,font-weight:300;
+classDef source fill:#bcf,font-family:arias,font-size:13px;
 
 ```
