@@ -26,7 +26,6 @@ class MemPool;
 
 typedef struct LogBlock
 {
-
     uint8_t *block_ptr;
     uint32_t block_id;
     uint32_t residue;

@@ -97,7 +97,7 @@ Cbool is_entry_expired(uint64_t index_entry);
 
 Cbool key_eq(const uint8_t *key1, size_t key1_len, const uint8_t *key2, size_t key2_len);
 
-Cbool val_eq(const uint8_t *val1, size_t val1_len, const uint8_t *val2, size_t val2_len);
+// Cbool val_eq(const uint8_t *val1, size_t val1_len, const uint8_t *val2, size_t val2_len);
 
 uint16_t try_read_from_bucket(const Bucket *bucket, const uint16_t tag, const uint8_t *key, uint32_t keylength);
 

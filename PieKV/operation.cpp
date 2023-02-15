@@ -4,7 +4,7 @@ extern size_t pre_count[4];
 extern struct timeval t0;                           
 
 MemPool *kMemPool;
-bool allow_mutation = false;
+bool allow_mutation = false; //false时关闭A-LRU
 
 Piekv::Piekv(int init_log_block_number, int init_block_size, int init_mem_block_number){
     is_running_ = 1;
@@ -77,7 +77,6 @@ bool Piekv::get(size_t t_id, uint64_t key_hash, const uint8_t *key,
         // segmentToGet->table_stats_->count += 1;
         
         item_offset += segmentToGet->get_log_block_id(block_id) * mempool_->get_block_size();
-        allow_mutation = 1;
         if (allow_mutation)
             this->move_to_head(bucket, (Bucket*)located_bucket,item, key_length,
                                value_length, ret, item_vec,
@@ -162,8 +161,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
     lock_two_buckets(bucket, tb);
     tablePosition tp = cuckoo_insert(bucket, key_hash, tag, tb, key, key_len, rounds);
 
-    if (tp.cuckoostatus == failure_table_full)
-    {
+    if (tp.cuckoostatus == failure_table_full) {
         // TODO: support eviction
 #ifdef EXP_LATENCY
         auto end = std::chrono::steady_clock::now();
@@ -179,8 +177,7 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
         segmentToSet->table_stats_->set_fail += 1;
         return false;//return FAILURE_HASHTABLE_FULL;
     }
-    if (tp.cuckoostatus == failure_key_duplicated)
-    {
+    if (tp.cuckoostatus == failure_key_duplicated) {
         // TODO: support overwrite
         // overwriting = true;
         Bucket *located_bucket = &bucket[tp.bucket];
@@ -190,28 +187,46 @@ bool Piekv::set(size_t t_id, uint64_t key_hash, uint8_t *key, uint32_t key_len,
             std::min(ITEMKEY_LENGTH(item->kv_length_vec), (uint32_t)MAX_KEY_LENGTH);
         size_t old_value_length = 
             std::min(ITEMVALUE_LENGTH(item->kv_length_vec), (uint32_t)MAX_VALUE_LENGTH);
-        
-        //目前底层只能比较32B大小的两值，且两者len不等时，直接认为不等。所以下面判断或底层实现至少需要改一个
-        // if (!val_eq(val,val_len,item->data + ROUNDUP8(key_length),old_value_length)) {
-        //     if (val_len <= old_value_length){
-        //         memcpy8(item->data + ROUNDUP8(key_length), val, val_len);
-        //         unlock_two_buckets(bucket, tb);
-        //         segmentToSet->table_stats_->set_inplace += 1;
-        //         return true;
-        //     }
-        // }
-        // else {
-        //     unlock_two_buckets(bucket, tb);
-        //     segmentToSet->table_stats_->set_fail += 1;
-        //     return false;
-        // }
-
-        if (val_eq(val,val_len,item->data + ROUNDUP8(key_length),old_value_length)) {
+            
+        /******************
+        * 范围:line 201-231/相对行数:1-31
+        * 类型:Key重复的处理
+        * 内容:不再比较val值，只要key重复且new size <= old size，就原地写入(不考虑LRU)，否则就按正常set流程走。
+        * key_eq()/val_eq()最多只能比较32B大小的两值，且两者len不等时即返回不等。考虑到暂时不需要val_eq()，已注释。
+        * 
+        * 添加者:bwb
+        * 时间:2022-11-25
+        *
+        ******************/
+        if (val_len <= old_value_length){
+            memcpy8(item->data + ROUNDUP8(key_length), val, val_len);
+            unlock_two_buckets(bucket, tb);
+            segmentToSet->table_stats_->set_inplace += 1;
+            return true;
+        }
+        // val_eq()比较后再判断size大小来决定操作是否原地写
+        /* if (!val_eq(val,val_len,item->data + ROUNDUP8(key_length),old_value_length)) {
+            if (val_len <= old_value_length){
+                memcpy8(item->data + ROUNDUP8(key_length), val, val_len);
+                unlock_two_buckets(bucket, tb);
+                segmentToSet->table_stats_->set_inplace += 1;
+                return true;
+            }
+        }
+        else {
             unlock_two_buckets(bucket, tb);
             segmentToSet->table_stats_->set_fail += 1;
             return false;
-        }
+        } */
 
+        // val_eq()比较后默认不原地写，直接走set流程
+        /* if (val_eq(val,val_len,item->data + ROUNDUP8(key_length),old_value_length)) {
+            unlock_two_buckets(bucket, tb);
+            segmentToSet->table_stats_->set_fail += 1;
+            return false;
+        } */
+
+        // 因为不再比较val，因此下面两行也不再需要
         // segmentToSet->table_stats_->set_fail += 1;
         // return false;//return FAILURE_ALREADY_EXIST;
     }

@@ -54,7 +54,7 @@ RTWorker::RTWorker(Piekv *piekv, size_t t_id, struct rte_mempool *send_mbuf_pool
 RTWorker::~RTWorker()
 {
 }
-
+ 
 void RTWorker::send_packet()
 {
     complement_pkt(tx_bufs_pt[pkt_id], tx_ptr, pktlen); 
@@ -92,7 +92,6 @@ void RTWorker::parse_set(){
       pktlen += SET_RESPOND_LEN;
       // rte_delay_us_block(2);
       // rte_delay_us_sleep(1);
-      // printf("SUCC!!!t_id:%d,set_key:%lu\n",core_id,*(uint64_t *)(ptr + kHeaderLen));
 
 
     } else {
@@ -100,7 +99,6 @@ void RTWorker::parse_set(){
       *(uint16_t *)tx_ptr = SET_FAIL;
       tx_ptr += SET_RESPOND_LEN;
       pktlen += SET_RESPOND_LEN;
-      // printf("FAIL!!!t_id:%d,set_key:%lu\n",core_id,*(uint64_t *)(ptr + kHeaderLen));
     }
     ptr += sizeof(RxSet_Packet) + rxset_packet->key_len + 
            rxset_packet->key_hash_len + rxset_packet->val_len;//rxset_packet四值相加
@@ -110,8 +108,8 @@ void RTWorker::parse_get()
 {   
     // printf("enter\n");
     // printf("pktlen:%d\n",pktlen);
-
-	if (pktlen > (kMaxFrameLen - kResCounterLen - max_get_return - kEndMarkLen)) {   // bwb:超过GET返回包安全length，暂停解析，先进入发包流程;其中GET_MAX_RETURN_LEN=16，原为22 ???
+    // bwb:超过GET返回包安全length，暂停解析，先进入发包流程
+	if (pktlen > (kMaxFrameLen - kResCounterLen - max_get_ret45urn - kEndMarkLen)) {   
         send_packet();
 	}
 	RxGet_Packet *rxget_packet = (RxGet_Packet *)ptr;
@@ -119,8 +117,8 @@ void RTWorker::parse_get()
 	uint64_t key_hash = *(uint64_t *)(key + rxget_packet->key_len);
 	// perform get operation, ret represents success or not
 	bool ret = piekv_->get(t_id_, key_hash, key, rxget_packet->key_len, 
-													tx_ptr + kHeaderLen + rxget_packet->key_len,
-													(uint32_t *)(tx_ptr + kTypeLen + kKeylenLen));
+						   tx_ptr + kHeaderLen + rxget_packet->key_len,
+						   (uint32_t *)(tx_ptr + kTypeLen + kKeylenLen));
 
 	if (ret) {
 			rt_counter_.get_succ += 1;
@@ -139,7 +137,7 @@ void RTWorker::parse_get()
 			tx_ptr += GET_RESPOND_LEN;
 			pktlen += GET_RESPOND_LEN;
 	}
-	ptr += sizeof(RxGet_Packet) + rxget_packet->key_len + rxget_packet->key_hash_len;
+	ptr += sizeof(RxGet_Packet) + rxget_packet->key_len + rxget_packet->key_hash_len;  
 }
 
 void RTWorker::complement_pkt(struct rte_mbuf *pkt, uint8_t *ptr, int pktlen)
@@ -220,7 +218,8 @@ void RTWorker::worker_proc() {
     }
     bool flag = false;
 
-    tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + kEIUHeaderLen + kResCounterLen; //  + kResCounterLen
+    tx_ptr = (uint8_t *)rte_pktmbuf_mtod(tx_bufs_pt[pkt_id], uint8_t *) + 
+             kEIUHeaderLen + kResCounterLen;
     pktlen = kEIUHeaderLen + kResCounterLen;
     while (piekv_->is_running_)
     {
