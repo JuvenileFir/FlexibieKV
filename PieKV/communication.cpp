@@ -109,7 +109,7 @@ void RTWorker::parse_get()
     // printf("enter\n");
     // printf("pktlen:%d\n",pktlen);
     // bwb:超过GET返回包安全length，暂停解析，先进入发包流程
-	if (pktlen > (kMaxFrameLen - kResCounterLen - max_get_ret45urn - kEndMarkLen)) {   
+	if (pktlen > (kMaxFrameLen - kResCounterLen - max_get_return - kEndMarkLen)) {   
         send_packet();
 	}
 	RxGet_Packet *rxget_packet = (RxGet_Packet *)ptr;

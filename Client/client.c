@@ -22,6 +22,7 @@
 // #include "zipfgo.h"//生成theta>1的数据分布
 
 // #define PRELOAD
+#define TAG_MASK (((uint64_t)1 << 8) - 1)
 
 #define RX_RING_SIZE 1024
 #define TX_RING_SIZE 1024
@@ -32,34 +33,58 @@
 #define BURST_SIZE (4U)
 #define PKG_GEN_COUNT 1
 
-#define GET_RATIO 0
 uint64_t total_set[NUM_QUEUE];
 uint64_t total_get[NUM_QUEUE];
 uint64_t total_packet[NUM_QUEUE];
 
+int kkey_len, kval_len, get_len, set_len;
+const int kkey_hash_len = 8;
+
+bool step;
 // #ifdef PRELOAD
 int loading_mode = 1;
 int server_threads = 0;
+int kv_len = 16;
 // #endif
 
-uint32_t get_threshold = (uint32_t)(GET_RATIO * (double)((uint32_t)-1));
+uint32_t get_threshold;
 
 // file descriptor for dump or read workload to/from file
 // FILE *fp[NUM_QUEUE];
 
-static struct rte_ether_addr S_Addr = {{0x04, 0x3f, 0x72, 0xdc, 0x26, 0x25}};//enp2s0f0 04:3f:72:dc:26:24   enp2s0f1 04:3f:72:dc:26:25
-static struct rte_ether_addr D_Addr = {{0x98, 0x03, 0x9b, 0x8f, 0xb1, 0xc9}};//dest 10.176.64.41对应的网卡enp3s0f1np1的MAC地址 即98:03:9b:8f:b1:c9
+/********************************************************
+*
+* 类型:struct rte_ether_addr/网卡MAC地址常量
+* 内容:
+        Src 10.176.64.36    enp2s0f0     04:3f:72:dc:26:24
+        Dst 10.176.64.41    enp3s0f1np1  98:03:9b:8f:b1:c9
+  详情:
+        10.176.64.36  对应网卡enp2s0f0的MAC地址为04:3f:72:dc:26:24
+                      对应网卡enp2s0f1的MAC地址为04:3f:72:dc:26:25
+        10.176.64.35  对应网卡的MAC地址为98:03:9b:8f:b0:10
+                      对应网卡的MAC地址为98:03:9b:8f:b0:11
+        10.176.64.40  对应网卡的MAC地址为98:03:9b:8f:b5:c0
+* 添加者:bwb
+* 时间:2022-11-24
+*
+********************************************************/
 
-// static struct rte_ether_addr S_Addr = {{0x04, 0x3f, 0x72, 0xdc, 0x26, 0x24}};//36
-// static struct rte_ether_addr D_Addr = {{0x98, 0x03, 0x9b, 0x8f, 0xb0, 0x10}};//35
+static struct rte_ether_addr S_Addr = 
+    {{0x04, 0x3f, 0x72, 0xdc, 0x26, 0x25}};
+static struct rte_ether_addr D_Addr = 
+    {{0x98, 0x03, 0x9b, 0x8f, 0xb1, 0xc9}};
 
+
+/*********************
+*
+* 类型:IP常量
+* 内容:SRC 10.176.64.36     DST 10.176.64.35    暂时用不到
+* 添加者:bwb
+* 时间:2022-11-24
+*
+**********************/
 #define IP_SRC_ADDR ((10U << 24) | (176U << 16) | (64U << 8) | 36U)
-#define IP_DST_ADDR ((10U << 24) | (176U << 16) | (64U << 8) | 35U)//对应IP
-
-// static struct rte_ether_addr S_Addr = {{0x98, 0x03, 0x9b, 0x8f, 0xb0, 0x11}};//source  217 也就是35
-// static struct rte_ether_addr D_Addr = {{0x98, 0x03, 0x9b, 0x8f, 0xb5, 0xc0}};//dest 10.141.221.222对应的网卡的MAC地址 即40
-// #define IP_SRC_ADDR ((10U << 24) | (141U << 16) | (221U << 8) | 217U)
-// #define IP_DST_ADDR ((10U << 24) | (141U << 16) | (221U << 8) | 222U)//对应IP
+#define IP_DST_ADDR ((10U << 24) | (176U << 16) | (64U << 8) | 35U)
 
 // 14(ethernet header) + 20(IP header) + 8(UDP header)
 const uint32_t kHeaderLen = 42;
@@ -106,7 +131,8 @@ static const struct rte_eth_conf port_conf_default = {//按照mica里面的进�
         {
             .mq_mode = ETH_MQ_RX_NONE,
             .max_rx_pkt_len = RTE_ETHER_MAX_LEN,
-            .offloads = (DEV_RX_OFFLOAD_VLAN_FILTER | DEV_RX_OFFLOAD_VLAN_STRIP),
+            .offloads = (DEV_RX_OFFLOAD_VLAN_FILTER | 
+                         DEV_RX_OFFLOAD_VLAN_STRIP),
         },
     .fdir_conf =
         {
@@ -122,14 +148,13 @@ static const struct rte_eth_conf port_conf_default = {//按照mica里面的进�
         },
 };
 
-
 uint8_t *mtod(struct rte_mbuf *mbuf) { /* for using this macro in gdb */
     return (uint8_t *)rte_pktmbuf_mtod(mbuf, uint8_t *);
 }
 
 static void check_pkt_content(struct rte_mbuf *pkt);
 static void tx_preload(struct rte_mbuf **tx_mbufs);
-static void tx_pkt_load(char *, struct zipf_gen_state *, uint64_t *,uint32_t);
+static int tx_pkt_load(char *, struct zipf_gen_state *, uint64_t *,uint32_t);
 static void rx_pkt_process(struct rte_mbuf **, uint16_t);
 static void print_stats(void);
 
@@ -338,7 +363,8 @@ To do:
     // set_key = preload_cnt + queue_id * ((total_cnt - preload_cnt) /
     // NUM_QUEUE);
     static uint64_t set_key[NUM_QUEUE];
-     set_key[queue_id] = 1 + queue_id * PER_THREAD_CNT + PRELOAD_CNT; 
+    set_key[queue_id] = 1 ; //考虑加上了tag判断，因此set初始值不作区分
+    //  set_key[queue_id] = 1 + queue_id * PER_THREAD_CNT + PRELOAD_CNT; 
     //  set_key[queue_id] = (uint64_t)1000000000 * (queue_id + 1); 
 
     // printf("queue_id:%d\tset_key_before:%lu\n",queue_id,set_key[queue_id]);
@@ -347,10 +373,18 @@ To do:
 
     char *ptr = NULL;
     core_statistics[core_id].enable = 1;
-    int T =10;
-    while (T) {
+    int T =10000;
+    int thread_id;
+
+    while (T--) {
         
         for (i = 0; i < SEND_ROUND; i++) {
+
+            ptr = (char *)((char *)rte_pktmbuf_mtod(tx_bufs_pt[i],char *)
+             + kHeaderLen);
+                           //rte_pktmbuf_mtod函数获得指向mbuf中数据开头的宏。
+
+            thread_id = tx_pkt_load(ptr, &zipf_state, set_key, queue_id);//组装packet
             // Random UDP port for RSS distributing pkts among RXs
             //用于RX之间RSS分发pkts的随机UDP端口
             /*
@@ -369,11 +403,6 @@ To do:
             // udph->dst_port = set_key % 65535;
             // ToDo: Is UPD cksum is needed?
             
-            ptr = (char *)((char *)rte_pktmbuf_mtod(tx_bufs_pt[i],char *)
-             + kHeaderLen);
-                           //rte_pktmbuf_mtod函数获得指向mbuf中数据开头的宏。
-
-            tx_pkt_load(ptr, &zipf_state, set_key, queue_id);//组装packet
 #ifdef _DUMP_PKT
             rte_pktmbuf_dump(fp[sched_getcpu()], tx_bufs_pt[i],
                              tx_bufs_pt[i]->pkt_len);
@@ -385,9 +414,10 @@ To do:
             //rte_eth_tx_burst——物理口发包函数
             total_packet[queue_id]++;
             core_statistics[core_id].tx += nb_tx;
+            // break;
         }
-
-            // break;//xhj 看是否这样server就会少输出一部分信息
+        
+        if(step) break;
         // rte_delay_us_sleep(400);
     }
 }
@@ -475,6 +505,78 @@ void *GetThread(context_t *context) {
 }
 
 int main(int argc, char *argv[]) {
+    int ch;
+    int run_time = 1;
+    float get_ratio = 0.5;
+    kkey_len = 8;
+    kval_len = 8;
+    step = false;
+    while ((ch = getopt(argc, argv, "hst:r:l:")) != -1) {
+        switch (ch) {
+        case 'h':
+            printf(" Usage: %s\t[-s only running one cycle (no arguments)]\n"
+                "\t\t\t[-t <running time(s)>]\n\t\t\t[-r <ratio of GET>]\n"
+                "\t\t\t[-l <KV length>(8:16:32:40:48:56:64:1024)]\n", argv[0]);
+            exit(0);
+        case 's':
+            step = true;
+            break;
+        case 't':
+            run_time = atoi(optarg);
+            break;
+        case 'r':
+            get_ratio = atof(optarg);
+            break;
+        case 'l':
+            kv_len = atoi(optarg);
+            if ((kv_len!=8)&&(kv_len!=16)&&(kv_len!=24)&&(kv_len!=32)&&
+                (kv_len!=40)&&(kv_len!=48)&&(kv_len!=56)&&(kv_len!=64)&&
+                (kv_len!=1024)) { 
+                printf("[ERROR] illegal kv length error!!\n");
+                return 0;
+            }
+            break;
+        default:
+            printf("Error: unknown option: %c\n", (char)optopt);
+            break;
+        }
+    }
+    printf("[INFO] 发送KV Object Size为:%d Bytes\n",kv_len);
+    if (kv_len == 8) {
+        kkey_len = 4;
+        kval_len = 4;
+    } else if (kv_len == 16) {
+        kkey_len = 8;
+        kval_len = 8;
+    } else if (kv_len == 24) {
+        kkey_len = 8;
+        kval_len = 16;
+    } else if (kv_len == 32) {
+        kkey_len = 8;
+        kval_len = 24;
+    } else if (kv_len == 40) {
+        kkey_len = 8;
+        kval_len = 32;
+    } else if (kv_len == 48) {
+        kkey_len = 16;
+        kval_len = 32;
+    } else if (kv_len == 56) {
+        kkey_len = 16;
+        kval_len = 40;
+    } else if (kv_len == 64) {
+        kkey_len = 16;
+        kval_len = 48;
+    } else if (kv_len == 1024) {
+        kkey_len = 128;
+        kval_len = 896;
+    } else {
+        printf("[ERROR] illegal kv length error!!\n");
+        return 0;
+    };
+    set_len = kkey_len + kkey_hash_len + kval_len + 8;
+    get_len = kkey_len + kkey_hash_len + 6;
+    get_threshold = (uint32_t)(get_ratio * (double)((uint32_t)-1));
+        // get_threshold = (uint32_t)(get_ratio * (double)RAND_MAX);
 
 #ifdef _DUMP_PKT
     char filename[50];//已有filename
@@ -508,6 +610,7 @@ int main(int argc, char *argv[]) {
         }
     }
 #endif
+
 for (int i = 0; i< NUM_QUEUE; i++){
     total_set[i] = 0;
     total_get[i] = 0;
@@ -641,15 +744,10 @@ for (int i = 0; i< NUM_QUEUE; i++){
                 perror("pthread_create error!!\n");
         }
     }
-    int T = 1;
-    while (T--) {
-        sleep(1);
-    }
+        sleep(run_time);
     for (int i = 0; i< NUM_QUEUE; i++) printf("[INFO]total pkt[ %d ]: %ld\n", i, total_packet[i]);
     for (int i = 0; i< NUM_QUEUE; i++) printf("[INFO]total set[ %d ]: %ld\n", i, total_set[i]);
     for (int i = 0; i< NUM_QUEUE; i++) printf("[INFO]total get[ %d ]: %ld\n", i, total_get[i]);
-
-
 
     return 0;
 }
@@ -679,27 +777,27 @@ static void tx_preload(struct rte_mbuf **tx_mbufs) {
             payload_len = kHeaderLen + MEGA_END_MARK_LEN;
             count = 0;
             /* construct a packet */
-            while (payload_len + SET_LEN <= ETHERNET_MAX_FRAME_LEN) {
+            while (payload_len + set_len <= ETHERNET_MAX_FRAME_LEN) {
                 count++;
                 *(uint16_t *)ptr = MEGA_JOB_SET;
                 ptr += sizeof(uint16_t); /* 2 bytes job type */
-                *(uint16_t *)ptr = KEY_LEN;
+                *(uint16_t *)ptr = kkey_len;
                 ptr += sizeof(uint16_t); /* 2 bytes key length */
-                *(uint16_t *)ptr = KEY_HASH_LEN;//2 byte
+                *(uint16_t *)ptr = kkey_hash_len;//2 byte
                 ptr += sizeof(uint16_t);
-                *(uint16_t *)ptr = VALUE_LEN;//2 byte
+                *(uint16_t *)ptr = kval_len;//2 byte
                 ptr += sizeof(uint16_t);
                 
-                key_hash =XXH64(&set_key,KEY_LEN,1);
+                key_hash =XXH64(&set_key,kkey_len,1);
 
                 *(uint64_t *)(ptr) = set_key;
-                ptr += KEY_LEN;
+                ptr += kkey_len;
                 *(uint64_t *)(ptr) = key_hash;
-                ptr += KEY_HASH_LEN;
+                ptr += kkey_hash_len;
                 *(uint64_t *)(ptr) = set_key + 1;
-                ptr += VALUE_LEN;
+                ptr += kval_len;
 
-                payload_len += SET_LEN;
+                payload_len += set_len;
 
                 set_key++;
                 if (set_key >= preload_cnt) {
@@ -806,139 +904,147 @@ void show_pkt(struct rte_mbuf *pkt) {
 }
 #endif
 
-static void tx_pkt_load(char *ptr, struct zipf_gen_state *zipf_state,
+static int tx_pkt_load(char *ptr, struct zipf_gen_state *zipf_state,
                         uint64_t *start_set_key,uint32_t t_id) {
 
     //将请求组装到一个packet中
     //tx_pkt_load(ptr, &zipf_state, &set_key);
     //参数1指向mempool的开始，参数三开始定义为1
-    uint16_t set_count = 0, get_count = 0;
+    uint16_t tag, set_count = 0, get_count = 0;
     uint16_t payload_len = kHeaderLen + MEGA_END_MARK_LEN;
     uint64_t key_hash, get_key64, set_val64, k = (uint64_t)(t_id + 1000);
     uint64_t set_key64 = *(uint64_t *)(start_set_key + t_id);
 
-    char* get_key = (char *)malloc(KEY_LEN);
-    char* set_key = (char *)malloc(KEY_LEN);
-    memset(get_key, 0, KEY_LEN);
-    memset(set_key, 0, KEY_LEN);
-    
+    char* get_key = (char *)malloc(kkey_len);
+    char* set_key = (char *)malloc(kkey_len);
+    memset(get_key, 0, kkey_len);
+    memset(set_key, 0, kkey_len);
+    int T=10;
     //在一个包内，get请求是先type，然后keylen，然后key
     //set的话，先是type，然后klen，valueLen，然后key和value
-    while(payload_len + GET_LEN <= ETHERNET_MAX_FRAME_LEN){
-			uint32_t op_r = mehcached_rand(&k);
-			bool is_get = op_r <= get_threshold;
-			
-			if(likely(is_get)){
-				total_get[t_id]++;
+    while(payload_len + get_len <= ETHERNET_MAX_FRAME_LEN){
+    // while(T--){
+        uint32_t op_r = mehcached_rand(&k);
+        bool is_get = op_r <= get_threshold;
+        if(likely(is_get)){
+            get_key64 = (uint64_t)mehcached_zipf_next(zipf_state) + 1;
 
-				get_count++;
-#ifndef _STATIC_WORKLOAD_
-			// get_key64 = (uint64_t)mehcached_zipf_next(zipf_state) + 1;
-			get_key64 = set_key64;
+            memcpy(get_key, &get_key64, 8);
+            key_hash =XXH64(get_key,kkey_len,1);
+            tag = (uint16_t)((key_hash >> 16) & TAG_MASK);
+            if (!(tag % NUM_QUEUE == t_id)) continue;
+                get_count++;
+                total_get[t_id]++;
 
-			memcpy(get_key, &get_key64, 8);
-			key_hash =XXH64(get_key,KEY_LEN,1);
-			// printf("GET\nkey:%zu,hash:%zu\n",get_key,key_hash);
+            // printf("GET\nkey:%zu,hash:%zu\n",get_key,key_hash);
 
-			// get_key = set_key;//??? xhj  why not zipf distribution？
-			/*There is no preload period, therefore the set_key must equals to the get_key.
-			So, the preload period should put all the set keys to the server, 
-			and then set new key and get key with zipf distribution.
+            // get_key = set_key;//??? xhj  why not zipf distribution？
+            /*There is no preload period, therefore the set_key must equals to the get_key.
+            So, the preload period should put all the set keys to the server, 
+            and then set new key and get key with zipf distribution.
 
-			To do:
-			1.modify the client and the server,
-				then test whether the server can receive the packet,
-				and test whether the client can receive the right response
-			2.modify the function of set and get as the golang code 
-			3.retest the whole data and train the model to get a new ML model
-			4.write and plot the results
-			Finish !!
-			*/
-			// assert(get_key >= 1 && get_key <= PRELOAD_CNT);
-#else
-			fscanf(fp[sched_getcpu() >> 1], "%lu ", &get_key);
-#endif
+            To do:
+            1.modify the client and the server,
+                then test whether the server can receive the packet,
+                and test whether the client can receive the right response
+            2.modify the function of set and get as the golang code 
+            3.retest the whole data and train the model to get a new ML model
+            4.write and plot the results
+            Finish !!
+            */
 
-#ifdef _DUMP_WORKLOAD_
-			fprintf(fp[sched_getcpu() >> 1], "%lu ", get_key);
-#endif
 
-			*(uint16_t *)ptr = MEGA_JOB_GET;//operation type
-			ptr += sizeof(uint16_t);
-			*(uint16_t *)ptr = KEY_LEN;
-			ptr += sizeof(uint16_t);
-			*(uint16_t *)ptr = KEY_HASH_LEN;//2 byte
-			ptr += sizeof(uint16_t);
+            *(uint16_t *)ptr = MEGA_JOB_GET;//operation type
+            ptr += sizeof(uint16_t);
+            *(uint16_t *)ptr = kkey_len;
+            ptr += sizeof(uint16_t);
+            *(uint16_t *)ptr = kkey_hash_len;//2 byte
+            ptr += sizeof(uint16_t);
+            if (kv_len == 16) {
+                *(uint64_t *)(ptr) = get_key64;
+            } else if (kv_len ==64) {
+                memcpy(ptr, get_key, kkey_len);
+            }
 
+    // #if defined(KV_LEN_8)
+    //         *(uint32_t *)(ptr) = (uint32_t)get_key64;
+            
+
+    // #elif defined(KV_LEN_16) || defined(KV_LEN_24) || defined(KV_LEN_32) || defined(KV_LEN_40)
+    //         *(uint64_t *)(ptr) = get_key64;
+
+    // #elif defined(KV_LEN_48) || defined(KV_LEN_56) || defined(KV_LEN_64) || defined(KV_LEN_1024)
+    //         memcpy(ptr, get_key, kkey_len);
+
+    // #endif
+            ptr += kkey_len;
+            *(uint64_t *)(ptr) = key_hash;
+            ptr += kkey_hash_len;//+8字节，即64位
+
+            payload_len += get_len;
+
+        } else {
+            if(unlikely((ETHERNET_MAX_FRAME_LEN - payload_len) < set_len)) break;
+            set_val64 = (set_key64 + 1) % TOTAL_CNT;
+            /* if (set_key64 >= (uint64_t)(PER_THREAD_CNT * (t_id + 1) + PRELOAD_CNT)) {
+                set_key64 = (uint64_t)(PER_THREAD_CNT * t_id + 1 + PRELOAD_CNT); //如果超过该线程分配的数据范围，则返回数据范围首位置
+                printf("new round\n");
+            } */
+            memcpy(set_key, &set_key64, 8);
+            key_hash = XXH64(set_key, kkey_len, 1);
+
+            tag = (uint16_t)((key_hash >> 16) & TAG_MASK);
+            if (!(tag % NUM_QUEUE == t_id)) {
+                set_key64++;
+                continue;
+            }
+            total_set[t_id]++;
+            set_count++;
+
+            *(uint16_t *)ptr = MEGA_JOB_SET; //#define MEGA_JOB_SET 0x3
+            ptr += sizeof(uint16_t);         //向后移动2 byte 即操作类型2 byte
+            *(uint16_t *)ptr = kkey_len;      // 2 byte
+            ptr += sizeof(uint16_t);
+            *(uint16_t *)ptr = kkey_hash_len; // 2 byte
+            ptr += sizeof(uint16_t);
+            *(uint16_t *)ptr = kval_len; // 2 byte
+            ptr += sizeof(uint16_t);
+
+            *(uint64_t *)(ptr + kkey_len) = key_hash;
+            /* if (kv_len == 16) {
+                *(uint64_t *)(ptr) = get_key64;
+            } else if (kv_len ==64) {
+                memcpy(ptr, get_key, kkey_len);
+            } */
 #if defined(KV_LEN_8)
-			*(uint32_t *)(ptr) = (uint32_t)get_key64;
-	
-#elif defined(KV_LEN_16) || defined(KV_LEN_24) || defined(KV_LEN_32) || defined(KV_LEN_40)
-			*(uint64_t *)(ptr) = get_key64;
-
-#elif defined(KV_LEN_48) || defined(KV_LEN_56) || defined(KV_LEN_64) || defined(KV_LEN_1024)
-			memcpy(ptr, get_key, KEY_LEN);
-
-#endif
-			ptr += KEY_LEN;
-			*(uint64_t *)(ptr) = key_hash;
-			ptr += KEY_HASH_LEN;//+8字节，即64位
-
-			payload_len += GET_LEN;
-
-			}
-			else{
-				if(unlikely((ETHERNET_MAX_FRAME_LEN - payload_len) < SET_LEN)) break;
-				total_set[t_id]++;
-				set_count++;
-				set_key64++;
-				set_val64 = (set_key64 + 1) % TOTAL_CNT;
-				if (set_key64 >= (uint64_t)(PER_THREAD_CNT * (t_id + 1) + PRELOAD_CNT)) {
-					set_key64 = (uint64_t)(PER_THREAD_CNT * t_id + 1 + PRELOAD_CNT); //如果超过该线程分配的数据范围，则返回数据范围首位置
-                    printf("new round\n");
-                }
-
-				memcpy(set_key, &set_key64, 8);
-				key_hash = XXH64(set_key, KEY_LEN, 1);
-
-				*(uint16_t *)ptr = MEGA_JOB_SET; //#define MEGA_JOB_SET 0x3
-				ptr += sizeof(uint16_t);         //向后移动2 byte 即操作类型2 byte
-				*(uint16_t *)ptr = KEY_LEN;      // 2 byte
-				ptr += sizeof(uint16_t);
-				*(uint16_t *)ptr = KEY_HASH_LEN; // 2 byte
-				ptr += sizeof(uint16_t);
-				*(uint16_t *)ptr = VALUE_LEN; // 2 byte
-				ptr += sizeof(uint16_t);
-
-				*(uint64_t *)(ptr + KEY_LEN) = key_hash;
-
-#if defined(KV_LEN_8)
-				*(uint32_t *)(ptr) = (uint32_t)set_key64;
-				ptr += KEY_LEN + KEY_HASH_LEN;
-				*(uint32_t *)(ptr) = (uint32_t)set_val64;
+            *(uint32_t *)(ptr) = (uint32_t)set_key64;
+            ptr += kkey_len + kkey_hash_len;
+            *(uint32_t *)(ptr) = (uint32_t)set_val64;
 
 #elif defined(KV_LEN_16)
-				*(uint64_t *)(ptr) = set_key64;//16+16+16+16=64,前面正好用了64位，set的key是从2开始逐渐递增的
-				ptr += KEY_LEN + KEY_HASH_LEN;//向后移动KEY_LEN+KEY_HASH_LEN
-				*(uint64_t *)(ptr) = set_val64;//value是key+1
+            *(uint64_t *)(ptr) = set_key64;//16+16+16+16=64,前面正好用了64位，set的key是从2开始逐渐递增的
+            ptr += kkey_len + kkey_hash_len;//向后移动KEY_LEN+kkey_hash_len
+            *(uint64_t *)(ptr) = set_val64;//value是key+1
 #else
-		#if defined(KV_LEN_24) || defined(KV_LEN_32) || defined(KV_LEN_40)
-				*(uint64_t *)(ptr) = set_key64;
-		#elif defined(KV_LEN_48) || defined(KV_LEN_56) || defined(KV_LEN_64) || defined(KV_LEN_1024)
-				memcpy(ptr, set_key, KEY_LEN);
-		#endif
-				ptr += KEY_LEN + KEY_HASH_LEN;
-				memcpy(ptr, &set_val64, 8);
-				memset(ptr + 8, 0, VALUE_LEN - 8);
+    #if defined(KV_LEN_24) || defined(KV_LEN_32) || defined(KV_LEN_40)
+            *(uint64_t *)(ptr) = set_key64;
+    #elif defined(KV_LEN_48) || defined(KV_LEN_56) || defined(KV_LEN_64) || defined(KV_LEN_1024)
+            memcpy(ptr, set_key, kkey_len);
+    #endif
+            ptr += kkey_len + kkey_hash_len;
+            memcpy(ptr, &set_val64, 8);
+            memset(ptr + 8, 0, kval_len - 8);
 #endif
-				ptr += VALUE_LEN;//向后移动value_len
-				payload_len += SET_LEN;
-			}
+            ptr += kval_len;//向后移动value_len
+            payload_len += set_len;
+            set_key64++;
+        }
     }
     *(uint64_t *)(start_set_key + t_id) = set_key64;//更新start_set_key字段
     /* pkt ending flag */
     *(uint16_t *)ptr = 0xFFFF;
     // printf("set:%u\tget:%u\tlen:%u\n", set_count, get_count, payload_len);
+    return t_id;
 }
 
 static void rx_pkt_process(struct rte_mbuf **recv_mbufs, uint16_t n_pkts) {
@@ -1125,3 +1231,4 @@ static int pkt_filter(const struct rte_mbuf *pkt) {//检查包的网卡MAC地址
     }
     return 0;
 }
+  

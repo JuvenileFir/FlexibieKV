@@ -34,10 +34,16 @@
 # VSCode
 .vscode
 
-PieKV/build/*
-PieKV/CMakeFiles
-PieKV/CMakeCache.txt
-PieKV/cmake_install.cmake
+
+
+Client/build
+Client/data
+Client/tools
+*.log
+*.sh
 
 
 FlexibleKV_previous_version/build
+
+
+PieKV/build
